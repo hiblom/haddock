@@ -21,7 +21,6 @@ impl Position {
     }
 
     pub fn apply_move(&mut self, mut mv: u16) {
-        //mv will be consumedddd
         //move consists of 2 byte parts: square from and square to
         const MASK: u16 = 0b0000_0000_1111_1111;
         
@@ -30,7 +29,10 @@ impl Position {
         
         let square_from = mv as usize;
 
+        //TODO en-passant, castling and promotion
         self.pieces[square_to] = self.pieces[square_from];
         self.pieces[square_from] = 0;
+
+        //TODO clear (or set) en-passant, update halfmove clock, fullmove nr, castling status, active color
     }
 }

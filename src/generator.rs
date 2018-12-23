@@ -4,8 +4,8 @@ use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
 use crate::piece::Piece;  
 
-pub fn generate_moves(position: &Position) -> Vec<u16> {
-    let mut result: Vec<u16> = Vec::new();
+pub fn generate_moves(position: &Position) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
 
     //normal moves
     for square in 0u8..64 {
@@ -20,7 +20,7 @@ pub fn generate_moves(position: &Position) -> Vec<u16> {
     result
 }
 
-pub fn generate_piece_moves(position: &Position, square: u8, piece: u8) -> Vec<u16> {
+pub fn generate_piece_moves(position: &Position, square: u8, piece: u8) -> Vec<u32> {
 
     let piece_type = Piece::get_type(piece);
     let piece_color = Piece::get_color(piece);
@@ -35,14 +35,14 @@ pub fn generate_piece_moves(position: &Position, square: u8, piece: u8) -> Vec<u
     }
 }
 
-pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -> Vec<u16> {
-    let mut result: Vec<u16> = Vec::new();
+pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
 
     //for now: slow algorithm
     //todo find faster algorithm
     let current_x: u8 = current_square % 8;
     let current_y: u8 = current_square / 8;
-    let from_square_base = (current_square as u16) << 8;
+    let from_square_base = (current_square as u32) << 8;
 
     let lower_y = match current_y {
         0 => 0,
@@ -73,7 +73,7 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
             let to_square = y * 8 + x;
             let piece = position.pieces[to_square as usize];
             if piece == 0 || !Piece::has_color(piece, color) {
-                result.push(from_square_base | to_square as u16);
+                result.push(from_square_base | to_square as u32);
             }
         }
     }
@@ -82,17 +82,17 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
     result
 }
 
-pub fn generate_queen_moves(position: &Position, current_square: u8, color: u8) -> Vec<u16> {
+pub fn generate_queen_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
     //for now we just make a combination of rook and bishop
     //todo find faster algorithm
-    let mut result: Vec<u16> = generate_rook_moves(position, current_square, color);
+    let mut result: Vec<u32> = generate_rook_moves(position, current_square, color);
     result.append(&mut generate_bishop_moves(position, current_square, color));
 
     result
 }
 
-pub fn generate_rook_moves(position: &Position, current_square: u8, color: u8) -> Vec<u16> {
-    let mut result: Vec<u16> = Vec::new();
+pub fn generate_rook_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
 
     //for now: slow algorithm
     //todo find faster algorithm
@@ -130,8 +130,8 @@ pub fn generate_rook_moves(position: &Position, current_square: u8, color: u8) -
     result
 }
 
-pub fn generate_bishop_moves(position: &Position, current_square: u8, color: u8) -> Vec<u16> {
-    let mut result: Vec<u16> = Vec::new();
+pub fn generate_bishop_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
 
     //for now: slow algorithm
     //todo find faster algorithm
@@ -185,8 +185,8 @@ pub fn generate_bishop_moves(position: &Position, current_square: u8, color: u8)
     result
 }
 
-pub fn generate_knight_moves(position: &Position, current_square: u8, color: u8) -> Vec<u16> {
-    let mut result: Vec<u16> = Vec::new();
+pub fn generate_knight_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
 
     //for now: slow algorithm
     //todo find faster algorithm
@@ -230,14 +230,14 @@ pub fn generate_knight_moves(position: &Position, current_square: u8, color: u8)
     result
 }
 
-pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -> Vec<u16> {
-    let mut result: Vec<u16> = Vec::new();
+pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
 
     //for now: slow algorithm
     //todo find faster algorithm
     let current_x: u8 = current_square % 8;
     let current_y: u8 = current_square / 8;
-    let from_square_base = (current_square as u16) << 8;
+    let from_square_base = (current_square as u32) << 8;
 
     let mut to_square: u8;
     let mut piece: u8;
@@ -254,7 +254,7 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
         to_square = y * 8 + current_x;
         piece = position.pieces[to_square as usize];
         if piece == 0 {
-            result.push(from_square_base | to_square as u16);
+            result.push(from_square_base | to_square as u32);
 
             if color == COLOR_WHITE && current_y == 1 || color == COLOR_BLACK && current_y == 6 {
                 if color == COLOR_WHITE {
@@ -266,7 +266,7 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
                 to_square = y * 8 + current_x;
                 piece = position.pieces[to_square as usize];
                 if piece == 0 {
-                    result.push(from_square_base | to_square as u16);
+                    result.push(from_square_base | to_square as u32);
                     //TODO fill enpassant square!!
                 }
 
@@ -274,7 +274,7 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
         }
     }
 
-    //takes left/right
+    //captures left/right
     y = current_y;
     let mut x;
     if y > 0 && y < 7 {
@@ -289,8 +289,15 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
             x = current_x - 1;
             to_square = y * 8 + x;
             piece = position.pieces[to_square as usize];
-            if piece != 0 && !Piece::has_color(piece, color) {
-                result.push(from_square_base | to_square as u16);
+            
+            let ep = (piece == 0) &&
+                (color == COLOR_WHITE && current_y == 4 || color == COLOR_BLACK && current_y == 3) &&
+                match position.enpassant_square {
+                    Some(s) => s == to_square,
+                    None => false };
+
+            if piece != 0 && !Piece::has_color(piece, color) || ep {
+                result.push(from_square_base | to_square as u32);
             }
         }
 
@@ -298,28 +305,30 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
             x = current_x + 1;
             to_square = y * 8 + x;
             piece = position.pieces[to_square as usize];
-            if piece != 0 && !Piece::has_color(piece, color) {
-                result.push(from_square_base | to_square as u16);
+
+            let ep = (piece == 0) &&
+                (color == COLOR_WHITE && current_y == 4 || color == COLOR_BLACK && current_y == 3) &&
+                match position.enpassant_square {
+                    Some(s) => s == to_square,
+                    None => false };
+
+            if piece != 0 && !Piece::has_color(piece, color) || ep {
+                result.push(from_square_base | to_square as u32);
             }
         }
     }
 
-    //enpassant
-    //check enpassant square in position
-    //TODO
-
-    //promote
-    //TODO
-    
+    //TODO promote
+   
     result
 }
 
-fn try_add_move(position: &Position, move_list: &mut Vec<u16>, current_square: u8, x:u8, y:u8, color: u8) -> bool {
+fn try_add_move(position: &Position, move_list: &mut Vec<u32>, current_square: u8, x:u8, y:u8, color: u8) -> bool {
     let to_square = y * 8 + x;
     let piece = position.pieces[to_square as usize];
     if piece == 0 || !Piece::has_color(piece, color) {
-        let from_square_base = (current_square as u16) << 8;
-        move_list.push(from_square_base | to_square as u16);
+        let from_square_base = (current_square as u32) << 8;
+        move_list.push(from_square_base | to_square as u32);
     }
 
     piece == 0
