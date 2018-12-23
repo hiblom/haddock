@@ -1,5 +1,7 @@
 # haddock
-UCI compatible chess engine
+Haddock is a UCI compatible chess engine, written in Rust
+
+It is not yet functional
 
 TODO before it is fully functional
 
