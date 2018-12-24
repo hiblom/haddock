@@ -4,9 +4,6 @@ use crate::piece::Piece;
 
 const MOVE_MASK_TO: u32           = 0b00000000_00000000_00000000_11111111;
 const MOVE_MASK_FROM: u32         = 0b00000000_00000000_11111111_00000000;
-//const MOVE_MASK_EP: u32           = 0b00000000_00000001_00000000_00000000; //don't need?
-//const MOVE_MASK_CASTLE_KING: u32  = 0b00000000_00000010_00000000_00000000; //don't need?
-//const MOVE_MASK_CASTLE_QUEEN: u32 = 0b00000000_00000100_00000000_00000000; //don't need?
 const MOVE_MASK_PROMO: u32        = 0b00000000_00000001_00000000_00000000;
 const MOVE_MASK_PROMO_PIECE: u32  = 0b11111111_00000000_00000000_00000000;
 
@@ -14,6 +11,9 @@ pub trait Move_ {
     fn new(value: Self) -> Self;
     fn from_str(value: &str) -> Option<Self> where Self: marker::Sized;
     fn get_fen(self) -> String;
+    fn get_squares(self) -> (u8, u8);
+    fn is_promotion(self) -> bool;
+    fn get_promo_piece(self) -> u8;
 }
 
 impl Move_ for u32 {
@@ -74,8 +74,23 @@ impl Move_ for u32 {
 
         //promotion move
         let promo_piece: u8 = ((self & MOVE_MASK_PROMO_PIECE) >> 24) as u8;
-        let promo_piece_char = Piece::to_char(promo_piece);
+        let promo_piece_char = Piece::to_char(promo_piece).to_ascii_lowercase();
 
         format!("{}{}{}", sq_from_str, sq_to_str, promo_piece_char)
+    }
+
+    fn get_squares(self) -> (u8, u8) {
+        let square_from = ((self & MOVE_MASK_FROM) >> 8) as u8;
+        let square_to = (self & MOVE_MASK_TO) as u8;
+
+        (square_from, square_to)
+    }
+
+    fn is_promotion(self) -> bool {
+        return self & MOVE_MASK_PROMO != 0;
+    }
+
+    fn get_promo_piece(self) -> u8 {
+        return ((self & MOVE_MASK_PROMO_PIECE) >> 24) as u8;
     }
 }

@@ -3,11 +3,27 @@ use std::marker;
 const CHAR_BASE: u8 = 97;
 const MASK: u8 = 0b0000_0111;
 
+pub trait SquareFactory {
+    fn create(x: Self, y: Self) -> u8;
+}
+
+impl SquareFactory for u8 {
+    fn create(x: u8, y: u8) -> u8 {
+        (y << 3) | x
+    }
+}
+
+impl SquareFactory for u32 {
+    fn create(x: u32, y: u32) -> u8 {
+        ((y << 3) | x) as u8
+    }
+}
+
 pub trait Square {
     fn new(value: Self) -> Self;
     fn from_str(value: &str) -> Option<Self> where Self: marker::Sized;
-    fn from_xy(x: u8, y: u8) -> Self;
     fn get_fen(self) -> String;
+    fn get_xy(self) -> (u8, u8);
 }
 
 impl Square for u8 {
@@ -53,16 +69,18 @@ impl Square for u8 {
             None => return None
         }
 
-        Some(Square::from_xy(x, y))
-    }
-
-    fn from_xy(x: u8, y: u8) -> u8 {
-        return (y << 3) | x;
+        Some(SquareFactory::create(x, y))
     }
 
     fn get_fen(self) -> String {
         let rank = (CHAR_BASE + (self & MASK)) as char;
         let file = (self >> 3) + 1;
         format!("{}{}", rank, file)
+    }
+
+    fn get_xy(self) -> (u8, u8) {
+        let x = self & MASK;
+        let y = self >> 3;
+        (x, y)
     }
 }

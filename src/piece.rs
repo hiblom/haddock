@@ -39,15 +39,20 @@ impl Piece for u8 {
     }
 
     fn to_char(self) -> char {
-        match self {
-            global::PIECE_KING => 'k',
-            global::PIECE_QUEEN => 'q',
-            global::PIECE_ROOK => 'r',
-            global::PIECE_BISHOP => 'b',
-            global::PIECE_KNIGHT => 'n',
-            global::PIECE_PAWN => 'p',
-            _ => '?' //should not happen
+        let c = match self & MASK_TYPE {
+            global::PIECE_KING => 'K',
+            global::PIECE_QUEEN => 'Q',
+            global::PIECE_ROOK => 'R',
+            global::PIECE_BISHOP => 'B',
+            global::PIECE_KNIGHT => 'N',
+            global::PIECE_PAWN => 'P',
+            _ => ' '
+        };
+
+        if self & MASK_COLOR == global::COLOR_BLACK {
+            return c.to_ascii_lowercase()
         }
+        c
     }
 
     fn get_color(self) -> u8 {

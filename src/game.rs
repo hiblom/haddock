@@ -7,6 +7,7 @@ use crate::parser;
 use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searcher::Searcher;
+use crate::move_::Move_;
 
 pub struct Game {
     receiver: Receiver<InputCommand>,
@@ -92,7 +93,8 @@ impl Game {
                 }
                 _ => match &mut self.position {
                         Some(pos) => {
-                            match parser::parse_move(args_parts[i]) {
+                            
+                            match Move_::from_str(args_parts[i]) {
                                 //TODO check move here...we need to be able to generate moves first!
                                 Some(mv) => {
                                     println!("Successfully applied move {}", &args_parts[i]);
