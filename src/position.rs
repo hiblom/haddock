@@ -99,6 +99,7 @@ impl Position {
         }
 
         //clear castling status when rook or king moved
+        //TODO also when rook captured
         if !castled {
             if self.active_color == global::COLOR_WHITE {
                 if self.castling_status[0] {
@@ -113,12 +114,12 @@ impl Position {
                 }
             }
             else {
-                if self.castling_status[3] {
+                if self.castling_status[2] {
                     if square_from == global::E8 || square_from == global::H8 {
                         self.castling_status[2] = false;
                     }
                 }
-                if self.castling_status[1] {
+                if self.castling_status[3] {
                     if square_from == global::E8 || square_from == global::A8 {
                         self.castling_status[3] = false;
                     }
