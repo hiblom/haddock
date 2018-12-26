@@ -585,3 +585,117 @@ fn test_pawn_moves_ep() {
         assert!(moves.contains(expected_move), "Pawn moves not as expected");
     }
 }
+
+#[test]
+fn test_pawn_moves_promo() {
+    //arrange
+    let fen = "k7/4P3/8/8/8/8/8/K7 w - - 0 1";
+    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
+    let position = crate::parser::parse_fen(&fen_parts).unwrap();
+
+    let expected_moves: [u32; 4] = [
+        mv("e7e8q"),
+        mv("e7e8r"),
+        mv("e7e8b"),
+        mv("e7e8n")
+    ];
+    
+    //act
+    let moves = crate::generator::generate_pawn_moves(&position, sq("e7"), crate::global::COLOR_WHITE);
+
+    //assert
+    assert_eq!(
+        expected_moves.len(),
+        moves.len(),
+        "Number of pawn moves not as expected"
+    );
+
+    for expected_move in expected_moves.iter() {
+        assert!(moves.contains(expected_move), "Pawn moves not as expected");
+    }
+}
+
+#[test]
+fn test_king_castling() {
+    //arrange
+    //black to move, king can go to d8 or c8 (castle)
+    let fen = "r3kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
+    let position = crate::parser::parse_fen(&fen_parts).unwrap();
+
+    let expected_moves: [u32; 2] = [
+        mv("e8d8"),
+        mv("e8c8")
+    ];
+    
+    //act
+    let moves = crate::generator::generate_king_moves(&position, sq("e8"), crate::global::COLOR_BLACK);
+
+    //assert
+    assert_eq!(
+        expected_moves.len(),
+        moves.len(),
+        "Number of king moves not as expected"
+    );
+
+    for expected_move in expected_moves.iter() {
+        assert!(moves.contains(expected_move), "king moves not as expected");
+    }
+
+}
+
+#[test]
+fn test_king_castling_sq_taken() {
+    //arrange
+    //black to move, king cannot castle because bishop is on b8
+    let fen = "rb2kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
+    let position = crate::parser::parse_fen(&fen_parts).unwrap();
+
+    let expected_moves: [u32; 1] = [
+        mv("e8d8")
+    ];
+    
+    //act
+    let moves = crate::generator::generate_king_moves(&position, sq("e8"), crate::global::COLOR_BLACK);
+
+    //assert
+    assert_eq!(
+        expected_moves.len(),
+        moves.len(),
+        "Number of king moves not as expected"
+    );
+
+    for expected_move in expected_moves.iter() {
+        assert!(moves.contains(expected_move), "king moves not as expected");
+    }
+
+}
+
+#[test]
+fn test_king_castling_no_status() {
+    //arrange
+    //black to move, king cannot castle no status
+    let fen = "r3kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQk - 0 1";
+    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
+    let position = crate::parser::parse_fen(&fen_parts).unwrap();
+
+    let expected_moves: [u32; 1] = [
+        mv("e8d8")
+    ];
+    
+    //act
+    let moves = crate::generator::generate_king_moves(&position, sq("e8"), crate::global::COLOR_BLACK);
+
+    //assert
+    assert_eq!(
+        expected_moves.len(),
+        moves.len(),
+        "Number of king moves not as expected"
+    );
+
+    for expected_move in expected_moves.iter() {
+        assert!(moves.contains(expected_move), "king moves not as expected");
+    }
+
+}

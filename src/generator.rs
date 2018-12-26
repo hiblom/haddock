@@ -3,6 +3,10 @@ use crate::global;
 use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
 use crate::piece::Piece;  
+use crate::move_::Move_;
+use crate::move_::MoveFactory;
+use crate::square::Square;
+use crate::square::SquareFactory;
 
 pub fn generate_moves(position: &Position) -> Vec<u32> {
     let mut result: Vec<u32> = Vec::new();
@@ -79,6 +83,44 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
     }
 
     //TODO castling
+    if color == COLOR_WHITE {
+        if position.castling_status[0] {
+            //white K-side
+            if  position.pieces[global::F1 as usize] == 0 && 
+                position.pieces[global::G1 as usize] == 0 {
+                result.push(MoveFactory::create(global::E1, global::G1));
+            }
+        }
+        if position.castling_status[1] {
+            //white Q-side
+            if  position.pieces[global::B1 as usize] == 0 && 
+                position.pieces[global::C1 as usize] == 0 && 
+                position.pieces[global::D1 as usize] == 0 {
+                    result.push(MoveFactory::create(global::E1, global::C1));
+            }
+        }
+    }
+    else {
+        if position.castling_status[2] {
+            println!("eval black K castling");
+            //black K-side
+            if  position.pieces[global::F8 as usize] == 0 && 
+                position.pieces[global::G8 as usize] == 0 {
+                    result.push(MoveFactory::create(global::E8, global::F8));
+            }
+        }
+        if position.castling_status[3] {
+            //black Q-side
+            println!("eval black Q castling");
+            if  position.pieces[global::B8 as usize] == 0 && 
+                position.pieces[global::C8 as usize] == 0 && 
+                position.pieces[global::D8 as usize] == 0 {
+                    println!("black Q castling found");
+                    result.push(MoveFactory::create(global::E8, global::C8));
+            }
+        }
+    }
+
     result
 }
 
@@ -235,9 +277,7 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
 
     //for now: slow algorithm
     //todo find faster algorithm
-    let current_x: u8 = current_square % 8;
-    let current_y: u8 = current_square / 8;
-    let from_square_base = (current_square as u32) << 8;
+    let (current_x, current_y) = Square::get_xy(current_square);
 
     let mut to_square: u8;
     let mut piece: u8;
@@ -251,10 +291,10 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
         else {
             y -= 1
         }
-        to_square = y * 8 + current_x;
+        to_square = SquareFactory::create(current_x, y);
         piece = position.pieces[to_square as usize];
         if piece == 0 {
-            result.push(from_square_base | to_square as u32);
+            result.push(MoveFactory::create(current_square, to_square));
 
             if color == COLOR_WHITE && current_y == 1 || color == COLOR_BLACK && current_y == 6 {
                 if color == COLOR_WHITE {
@@ -263,11 +303,10 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
                 else {
                     y -= 1
                 }
-                to_square = y * 8 + current_x;
+                to_square = SquareFactory::create(current_x, y);
                 piece = position.pieces[to_square as usize];
                 if piece == 0 {
-                    result.push(from_square_base | to_square as u32);
-                    //TODO fill enpassant square!!
+                    result.push(MoveFactory::create(current_square, to_square));
                 }
 
             }
@@ -297,7 +336,7 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
                     None => false };
 
             if piece != 0 && !Piece::has_color(piece, color) || ep {
-                result.push(from_square_base | to_square as u32);
+                result.push(MoveFactory::create(current_square, to_square));
             }
         }
 
@@ -313,13 +352,33 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
                     None => false };
 
             if piece != 0 && !Piece::has_color(piece, color) || ep {
-                result.push(from_square_base | to_square as u32);
+                result.push(MoveFactory::create(current_square, to_square));
             }
         }
     }
 
-    //TODO promote
+    //promotions
+    let end_result = find_promos(result, color);
    
+    end_result
+}
+
+fn find_promos(moves: Vec<u32>, color: u8) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
+
+    for m in moves {
+        let (_, sq_to) = Move_::get_squares(m);
+        let (_, y_to) = Square::get_xy(sq_to);
+        if (color == COLOR_WHITE && y_to == 7) || (color == COLOR_BLACK && y_to == 0) {
+            result.push(Move_::create_promo_copy(m, global::PIECE_QUEEN));
+            result.push(Move_::create_promo_copy(m, global::PIECE_ROOK));
+            result.push(Move_::create_promo_copy(m, global::PIECE_BISHOP));
+            result.push(Move_::create_promo_copy(m, global::PIECE_KNIGHT));
+        }
+        else {
+            result.push(m);
+        }
+    }
     result
 }
 
