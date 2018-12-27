@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+extern crate ctrlc;
+
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

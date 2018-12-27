@@ -7,6 +7,7 @@ use crate::move_::Move_;
 use crate::move_::MoveFactory;
 use crate::square::Square;
 use crate::piecemove;
+use crate::evaluation;
 
 pub fn generate_moves(position: &Position) -> Vec<u32> {
     let mut result: Vec<u32> = Vec::new();
@@ -21,6 +22,23 @@ pub fn generate_moves(position: &Position) -> Vec<u32> {
     }
 
     result
+}
+
+pub fn generate_legal_moves(position: &Position) -> Vec<u32> {
+    let color = position.active_color;
+    //find all moves
+    let moves = generate_moves(position);
+    
+    //filter out illegal moves
+    let mut legal_moves:Vec<u32> = Vec::new();
+    for mv in moves {
+        let mut pos = position.clone();
+        pos.apply_move(mv);
+        if !evaluation::is_check(&pos, color) {
+            legal_moves.push(mv);
+        }
+    }
+    legal_moves
 }
 
 pub fn generate_piece_moves(position: &Position, square: u8, piece: u8) -> Vec<u32> {
@@ -49,8 +67,6 @@ pub fn generate_normal_piece_moves(position: &Position, current_square: u8, colo
         return result;
     }
 
-    println!("generate normal moves for piece: {}", piece);
-
     let mut piece_type = Piece::get_type(piece); //type withour color info
     
     //for pawns we need to make a distinction between black and white
@@ -60,14 +76,11 @@ pub fn generate_normal_piece_moves(position: &Position, current_square: u8, colo
 
     let piece_moves = piecemove::get_piece_moves(piece_type);
 
-    println!("found nr of directions: {}", piece_moves.len());
-
     for dir in piece_moves {
         let mut square = current_square;
         for _ in 0..dir.max_steps {
             match (dir.mov)(square) {
                 Some(s) => {
-                    println!("found square: {}", s);
                     let other_piece = position.pieces[s as usize];
                     if other_piece == 0 {
                         //move silently

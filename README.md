@@ -5,9 +5,7 @@ It is not yet functional
 
 TODO before it is fully functional
 
-* implement all rules (en-passant, castling, promotion)
-* implement legality check (move must not set own king check)
-* implement concept of check and check-mate
+* implement concept of win/loss/draw
 * implement all UCI input
 * position evaluation
 * search tree

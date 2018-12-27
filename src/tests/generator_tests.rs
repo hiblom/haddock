@@ -699,3 +699,32 @@ fn test_king_castling_no_status() {
     }
 
 }
+
+#[test]
+fn test_legal_moves() {
+    //arrange
+    //black to move, rook on g1, black king h8
+    let fen = "7k/8/8/8/8/8/8/K5R1 b - - 0 1";
+    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
+    let position = crate::parser::parse_fen(&fen_parts).unwrap();
+
+    //only one legal move
+    let expected_moves: [u32; 1] = [
+        mv("h8h7")
+    ];
+    
+    //act
+    let moves = crate::generator::generate_legal_moves(&position);
+
+    //assert
+    assert_eq!(
+        expected_moves.len(),
+        moves.len(),
+        "Number of king moves not as expected"
+    );
+
+    for expected_move in expected_moves.iter() {
+        assert!(moves.contains(expected_move), "king moves not as expected: {}", expected_move);
+    }
+
+}

@@ -42,11 +42,12 @@ impl Searcher {
     }
 
     fn handle_command_find_best_move(&self) {
-        let moves = generator::generate_moves(&self.base_position);
-        let mut rng = rand::thread_rng();
-        let i = rng.gen_range(0, moves.len());
+        let legal_moves = generator::generate_legal_moves(&self.base_position);
 
-        println!("bestmove {}", Move_::get_fen(moves[i]));
+        let mut rng = rand::thread_rng();
+        let i = rng.gen_range(0, legal_moves.len());
+
+        println!("bestmove {}", Move_::get_fen(legal_moves[i]));
         //TODO OPTIMIZE
     }
 }
