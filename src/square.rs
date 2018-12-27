@@ -24,6 +24,22 @@ pub trait Square {
     fn from_str(value: &str) -> Option<Self> where Self: marker::Sized;
     fn get_fen(self) -> String;
     fn get_xy(self) -> (u8, u8);
+    fn up(self) -> Option<Self> where Self: marker::Sized;
+    fn down(self) -> Option<Self> where Self: marker::Sized;
+    fn left(self) -> Option<Self> where Self: marker::Sized;
+    fn right(self) -> Option<Self> where Self: marker::Sized;
+    fn up_left(self) -> Option<Self> where Self: marker::Sized;
+    fn up_right(self) -> Option<Self> where Self: marker::Sized;
+    fn down_left(self) -> Option<Self> where Self: marker::Sized;
+    fn down_right(self) -> Option<Self> where Self: marker::Sized;
+    fn up_up_right(self) -> Option<Self> where Self: marker::Sized;
+    fn up_up_left(self) -> Option<Self> where Self: marker::Sized;
+    fn down_down_right(self) -> Option<Self> where Self: marker::Sized;
+    fn down_down_left(self) -> Option<Self> where Self: marker::Sized;
+    fn up_right_right(self) -> Option<Self> where Self: marker::Sized;
+    fn up_left_left(self) -> Option<Self> where Self: marker::Sized;
+    fn down_right_right(self) -> Option<Self> where Self: marker::Sized;
+    fn down_left_left(self) -> Option<Self> where Self: marker::Sized;
 }
 
 impl Square for u8 {
@@ -83,4 +99,145 @@ impl Square for u8 {
         let y = self >> 3;
         (x, y)
     }
+
+    fn up(self) -> Option<u8> {
+        let y = self >> 3;
+        if y < 7 {
+            return Some(self + 8);
+        }
+        None
+    }
+
+    fn down(self) -> Option<u8> {
+        let y = self >> 3;
+        if y > 0 {
+            return Some(self - 8);
+        }
+        None
+    }
+
+    fn left(self) -> Option<u8> {
+        let x = self & MASK;
+        if x > 0 {
+            return Some(self - 1);
+        }
+        None
+    }
+
+    fn right(self) -> Option<u8> {
+        let x = self & MASK;
+        if x < 7 {
+            return Some(self + 1);
+        }
+        None
+    }
+
+    fn up_left(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x > 0 && y < 7 {
+            return Some(self + 7)
+        }
+        None
+    }
+
+    fn up_right(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x < 7 && y < 7 {
+            return Some(self + 9)
+        }
+        None
+    }
+
+    fn down_left(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x > 0 && y > 0 {
+            return Some(self - 9)
+        }
+        None
+    }
+
+    fn down_right(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x < 7 && y > 0 {
+            return Some(self - 7)
+        }
+        None
+    }
+
+    fn up_up_right(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x < 7 && y < 6 {
+            return Some(self + 17)
+        }
+        None
+    }
+
+    fn up_up_left(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x > 0 && y < 6 {
+            return Some(self + 15)
+        }
+        None
+    }
+
+    fn down_down_right(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x < 7 && y > 1 {
+            return Some(self - 15)
+        }
+        None
+    }
+
+    fn down_down_left(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x > 0 && y > 1 {
+            return Some(self - 17)
+        }
+        None
+    }
+
+    fn up_right_right(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x < 6 && y < 7 {
+            return Some(self + 10)
+        }
+        None
+    }
+
+    fn up_left_left(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x > 1 && y < 7 {
+            return Some(self + 6)
+        }
+        None
+    }
+
+    fn down_right_right(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x < 6 && y > 0 {
+            return Some(self - 6)
+        }
+        None
+    }
+
+    fn down_left_left(self) -> Option<u8> {
+        let x = self & MASK;
+        let y = self >> 3;
+        if x > 1 && y > 0 {
+            return Some(self - 10)
+        }
+        None
+    }
+
 }

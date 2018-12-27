@@ -6,3 +6,5 @@ macro_rules! hashmap {
          map
     }}
 }
+
+//useage: hashmap!{1 => 'A', 2 => 'b'}

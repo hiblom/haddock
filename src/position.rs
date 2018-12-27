@@ -98,8 +98,7 @@ impl Position {
             }
         }
 
-        //clear castling status when rook or king moved
-        //TODO also when rook captured
+        //clear castling status when rook or king moved, or opponent's rook captured
         if !castled {
             if self.active_color == global::COLOR_WHITE {
                 if self.castling_status[0] {
@@ -112,6 +111,16 @@ impl Position {
                         self.castling_status[1] = false;
                     }
                 }
+                if self.castling_status[2] {
+                    if square_to == global::H8 {
+                        self.castling_status[2] = false;
+                    }
+                }
+                if self.castling_status[3] {
+                    if square_to == global::A8  {
+                        self.castling_status[3] = false;
+                    }
+                }
             }
             else {
                 if self.castling_status[2] {
@@ -122,6 +131,16 @@ impl Position {
                 if self.castling_status[3] {
                     if square_from == global::E8 || square_from == global::A8 {
                         self.castling_status[3] = false;
+                    }
+                }
+                if self.castling_status[0] {
+                    if square_to == global::H1 {
+                        self.castling_status[0] = false;
+                    }
+                }
+                if self.castling_status[1] {
+                    if square_to == global::A1  {
+                        self.castling_status[1] = false;
                     }
                 }
             }
