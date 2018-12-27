@@ -18,6 +18,7 @@ mod piecemove;
 mod generator;
 mod searchcommand;
 mod searcher;
+mod outcome;
 mod evaluation;
 
 use std::io;

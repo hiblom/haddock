@@ -20,6 +20,7 @@ mod piecemove;
 mod generator;
 mod searchcommand;
 mod searcher;
+mod outcome;
 mod evaluation;
 
 mod tests;
