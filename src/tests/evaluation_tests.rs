@@ -123,9 +123,8 @@ fn test_is_check_by_pawn() {
 #[test]
 fn test_fools_mate() {
     //arrange
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";;
-    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
-    let mut position = crate::parser::parse_fen(&fen_parts).unwrap();
+    let mut position = crate::parser::parse_startpos().unwrap();
+    
     position.apply_move(mv("f2f3"));
     position.apply_move(mv("e7e5"));
 
@@ -136,11 +135,9 @@ fn test_fools_mate() {
     let score = crate::evaluation::evaluate(&position);
 
     //assert
-    println!("{}", position);
-
     assert_eq!(
-        true,
-        score.check_mate,
+        crate::outcome::Outcome::WhiteIsMate,
+        score,
         "Check mate not as expected"
     );
 }

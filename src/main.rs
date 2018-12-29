@@ -20,6 +20,7 @@ mod searchcommand;
 mod searcher;
 mod outcome;
 mod evaluation;
+mod tree;
 
 use std::io;
 use std::sync::mpsc::{Sender, Receiver};

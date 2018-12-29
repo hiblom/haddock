@@ -76,61 +76,31 @@ pub fn find_square_attackers(position: &Position, current_square: u8, color: u8)
 
 pub fn evaluate(position: &Position) -> Outcome {
     let check = is_check(position, position.active_color);
-    println!("check: {}", check);
     
     let no_legal_moves_left = generator::generate_legal_moves(position).len() == 0;
-    println!("no legal moves: {}", no_legal_moves_left);
 
     let check_mate = check && no_legal_moves_left;
     if check_mate {
-        let material_value = match position.active_color {
-            global::COLOR_WHITE => -POINT_VALUE[&global::PIECE_KING],
-            _ => POINT_VALUE[&global::PIECE_KING]
-        };
-        return Outcome {
-            material_value: material_value,
-            end: true,
-            check_mate: true,
-            stale_mate: false,
-            halfmoveclock: false,
-            repitition: false
-        };
+        if position.active_color == global::COLOR_WHITE {
+            return Outcome::WhiteIsMate
+        }
+        else {
+            return Outcome::BlackIsMate
+        }
     }
 
     let stale_mate = !check && no_legal_moves_left;
     if stale_mate {
-        return Outcome {
-            material_value: 0,
-            end: true,
-            check_mate: false,
-            stale_mate: true,
-            halfmoveclock: false,
-            repitition: false
-        };
+        return Outcome::DrawByStalemate
     }
 
     let halfmoveclock = position.halfmoveclock >= global::MAX_HALFMOVECLOCK;
     if halfmoveclock {
-        return Outcome {
-            material_value: 0,
-            end: true,
-            check_mate: false,
-            stale_mate: false,
-            halfmoveclock: true,
-            repitition: false
-        };
+        return Outcome::DrawByHalfmoveclock
     }
 
     let material_value = get_material_value(position);
-
-    Outcome {
-        material_value: material_value,
-        end: false,
-        check_mate: false,
-        stale_mate: false,
-        halfmoveclock: false,
-        repitition: false
-    }
+    Outcome::Undecided(material_value)
 }
 
 fn get_material_value(position: &Position) -> i16 {
