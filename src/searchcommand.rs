@@ -2,5 +2,5 @@
 
 pub enum SearchCommand {
     Quit,
-    FindBestMove
+    FindBestMove(u64, u64, u64, u64)
 }

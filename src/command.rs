@@ -7,7 +7,7 @@ pub enum InputCommand {
     Register,
     UciNewGame,
     Position(String),
-    Go,
+    Go(String),
     Stop,
     PonderHit,
     Quit

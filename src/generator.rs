@@ -60,8 +60,7 @@ pub fn generate_normal_piece_moves(position: &Position, current_square: u8, colo
     let mut result: Vec<u32> = Vec::new();
 
     //yes this is slow
-    //TODO make faster, possibly with bitboards
-   
+    //TODO make faster, possibly with bitboards??
     let piece = position.pieces[current_square as usize];
     if piece == 0 {
         return result;
@@ -135,7 +134,7 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
             //black K-side
             if  position.pieces[global::F8 as usize] == 0 && 
                 position.pieces[global::G8 as usize] == 0 {
-                    result.push(MoveFactory::create(global::E8, global::F8));
+                    result.push(MoveFactory::create(global::E8, global::G8));
             }
         }
         if position.castling_status[3] {

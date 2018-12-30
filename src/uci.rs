@@ -15,7 +15,7 @@ pub fn parse(line: &str) -> Option<InputCommand> {
             "register" => return Some(InputCommand::Register),
             "ucinewgame" => return Some(InputCommand::UciNewGame),
             "position" => return Some(InputCommand::Position(get_rest_string(&words, i))),
-            "go" => return Some(InputCommand::Go),
+            "go" => return Some(InputCommand::Go(get_rest_string(&words, i))),
             "stop" => return Some(InputCommand::Stop),
             "ponderhit" => return Some(InputCommand::PonderHit),
             "quit" => return Some(InputCommand::Quit),

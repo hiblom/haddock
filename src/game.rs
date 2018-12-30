@@ -8,6 +8,7 @@ use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searcher::Searcher;
 use crate::move_::Move_;
+use crate::generator;
 
 pub struct Game {
     receiver: Receiver<InputCommand>,
@@ -42,9 +43,9 @@ impl Game {
         match command {
             InputCommand::Quit => self.handle_command_quit(),
             InputCommand::Position(args) => self.handle_command_position(&args),
-            InputCommand::Go => self.handle_command_go(),
+            InputCommand::Go(args) => self.handle_command_go(&args),
             _ => {
-                println!("info string handle_command received other command");
+                println!("handle_command received other command");
                 true
             }
         }
@@ -67,7 +68,6 @@ impl Game {
                 "startpos" => match parser::parse_startpos() {
                     Some(position) => {
                         self.position = Some(position);
-                        println!("Successfully applied startpos FEN");
                     }
                     None => {
                         println!("Error in startpos FEN");
@@ -75,15 +75,21 @@ impl Game {
                     }
                 },
                 "fen" => {
-                    if args_parts.len() < 7 {
+                    let max_fen_index;
+                    match args_parts.iter().position(|&r| r == "moves") {
+                        None => max_fen_index = args_parts.len() + 1,
+                        Some(i) => max_fen_index = i
+                    }
+
+                    if max_fen_index < 2 {
                         println!("FEN too short");
                         return true;
                     }
-                    match parser::parse_fen(&args_parts[1..7]) {
+
+                    match parser::parse_fen(&args_parts[1..max_fen_index]) {
                         Some(position) => {
                             self.position = Some(position);
-                            println!("Successfully applied FEN");
-                            i += 6;
+                            i += max_fen_index;
                         }
                         None => {
                             println!("Error in FEN");
@@ -91,14 +97,19 @@ impl Game {
                         }
                     }
                 }
+                "moves" => (),
                 _ => match &mut self.position {
                         Some(pos) => {
-                            
                             match Move_::from_str(args_parts[i]) {
-                                //TODO check move here...we need to be able to generate moves first!
                                 Some(mv) => {
-                                    println!("Successfully applied move {}", &args_parts[i]);
-                                    pos.apply_move(mv)
+                                    let moves = generator::generate_legal_moves(pos);
+                                    if moves.contains(&mv) {
+                                        pos.apply_move(mv);
+                                    }
+                                    else {
+                                        println!("{} is an illegal move!", &args_parts[i]);
+                                        return true;  
+                                    }
                                 }, 
                                 None => {
                                     println!("Error in move");
@@ -112,10 +123,84 @@ impl Game {
             i += 1;
         }
 
+        //println!("{}", self.position.unwrap());
+
         true
     }
 
-    fn handle_command_go(&mut self) -> bool {
+    fn handle_command_go(&mut self, args: &str) -> bool {
+        let args_parts = args.split(" ").collect::<Vec<&str>>();
+
+        let mut wtime = 0;
+        let mut btime = 0;
+        let mut winc = 0;
+        let mut binc = 0;
+
+        let mut i: usize = 0;
+        while i < args_parts.len() {
+            match args_parts[i] {
+                "wtime" => {
+                    if args_parts.len() > i {
+                        match args_parts[i + 1].parse::<u64>() {
+                            Ok(n) => {
+                                wtime = n;
+                                i += 1;
+                            },
+                            Err(_) => {
+                                println!("Could not parse wtime");
+                                return true;
+                            }
+                        }
+                    }
+                },
+                "btime" => {
+                    if args_parts.len() > i {
+                        match args_parts[i + 1].parse::<u64>() {
+                            Ok(n) => {
+                                btime = n;
+                                i += 1;
+                            },
+                            Err(_) => {
+                                println!("Could not parse btime");
+                                return true;
+                            }
+                        }
+                    }
+                },
+                "winc" => {
+                    if args_parts.len() > i {
+                        match args_parts[i + 1].parse::<u64>() {
+                            Ok(n) => {
+                                winc = n;
+                                i += 1;
+                            },
+                            Err(_) => {
+                                println!("Could not parse winc");
+                                return true;
+                            }
+                        }
+                    }
+                },
+                "binc" => {
+                    if args_parts.len() > i {
+                        match args_parts[i + 1].parse::<u64>() {
+                            Ok(n) => {
+                                binc = n;
+                                i += 1;
+                            },
+                            Err(_) => {
+                                println!("Could not parse binc");
+                                return true;
+                            }
+                        }
+                    }
+                },
+                _ => ()
+            }
+            i += 1;
+        }
+
+
         let sender: &Sender<SearchCommand>;
         self.setup_search();
         
@@ -124,7 +209,8 @@ impl Game {
             None => return true
         }
 
-        sender.send(SearchCommand::FindBestMove).expect("Error while sending search command");
+        sender.send(SearchCommand::FindBestMove(wtime, btime, winc, binc)).
+            expect("Error while sending search command");
 
         true
     }

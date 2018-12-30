@@ -82,10 +82,10 @@ pub fn evaluate(position: &Position) -> Outcome {
     let check_mate = check && no_legal_moves_left;
     if check_mate {
         if position.active_color == global::COLOR_WHITE {
-            return Outcome::WhiteIsMate
+            return Outcome::WhiteIsMate(0)
         }
         else {
-            return Outcome::BlackIsMate
+            return Outcome::BlackIsMate(0)
         }
     }
 
@@ -98,6 +98,9 @@ pub fn evaluate(position: &Position) -> Outcome {
     if halfmoveclock {
         return Outcome::DrawByHalfmoveclock
     }
+
+    //TODO repetition
+    //TODO not enough material
 
     let material_value = get_material_value(position);
     Outcome::Undecided(material_value)

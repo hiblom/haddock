@@ -136,7 +136,7 @@ fn test_fools_mate() {
 
     //assert
     assert_eq!(
-        crate::outcome::Outcome::WhiteIsMate,
+        crate::outcome::Outcome::WhiteIsMate(0),
         score,
         "Check mate not as expected"
     );

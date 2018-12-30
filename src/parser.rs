@@ -10,37 +10,82 @@ pub fn parse_startpos() -> Option<Position> {
 }
 
 pub fn parse_fen(fen_parts: &[&str]) -> Option<Position> {
-    if fen_parts.len() != 6 {
+    if fen_parts.len() < 2 {
         return None;
     }
+
+    let adj_fen_parts = apply_fen_defaults(fen_parts);
 
     let mut position = Position::new();
 
-    if !parse_fen_pieces(&mut position, fen_parts[0]) {
+    if !parse_fen_pieces(&mut position, &adj_fen_parts[0]) {
         return None;
     }
 
-    if !parse_fen_color(&mut position, fen_parts[1]) {
+    if !parse_fen_color(&mut position, &adj_fen_parts[1]) {
         return None;
     }
 
-    if !parse_fen_castling(&mut position, fen_parts[2]) {
+    if !parse_fen_castling(&mut position, &adj_fen_parts[2]) {
         return None;
     }
 
-    if !parse_fen_enpassant(&mut position, fen_parts[3]) {
+    if !parse_fen_enpassant(&mut position, &adj_fen_parts[3]) {
         return None;
     }
 
-    if !parse_fen_halfmoveclock(&mut position, fen_parts[4]) {
+    if !parse_fen_halfmoveclock(&mut position, &adj_fen_parts[4]) {
         return None;
     }
 
-    if !parse_fen_fullmovenumber(&mut position, fen_parts[5]) {
+    if !parse_fen_fullmovenumber(&mut position, &adj_fen_parts[5]) {
         return None;
     }
 
     Some(position)
+}
+
+fn apply_fen_defaults(fen_parts: &[&str]) -> [String; 6] {
+    let mut result: [String; 6] = Default::default();
+
+    result[0] = fen_parts[0].to_string();
+    
+    if fen_parts.len() <= 1 {
+        result[1] = "w".to_string();
+    }
+    else {
+        result[1] = fen_parts[1].to_string();
+    }
+
+    if fen_parts.len() <= 2 {
+        result[2] = "-".to_string();
+    }
+    else {
+        result[2] = fen_parts[2].to_string();
+    }
+
+    if fen_parts.len() <= 3 {
+        result[3] = "-".to_string();
+    }
+    else {
+        result[3] = fen_parts[3].to_string();
+    }
+
+    if fen_parts.len() <= 4 {
+        result[4] = "0".to_string();
+    }
+    else {
+        result[4] = fen_parts[4].to_string();
+    }
+
+    if fen_parts.len() <= 5 {
+        result[5] = "1".to_string();
+    }
+    else {
+        result[5] = fen_parts[5].to_string();
+    }
+
+    result
 }
 
 fn parse_fen_pieces(position: &mut Position, fen_pieces: &str) -> bool {

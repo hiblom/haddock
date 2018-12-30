@@ -65,33 +65,33 @@ impl Position {
         let mut castled = false;
         if piece.get_type() == global::PIECE_KING {
             //e1c1
-            if (square_from, square_to) == (4, 2) {
-                self.pieces[4] = self.pieces[0];
-                self.pieces[0] = 0;
+            if (square_from, square_to) == (global::E1, global::C1) {
+                self.pieces[global::D1 as usize] = self.pieces[global::A1 as usize];
+                self.pieces[global::A1 as usize] = 0;
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e1g1
-            else if (square_from, square_to) == (4, 6) {
-                self.pieces[4] = self.pieces[7];
-                self.pieces[7] = 0;
+            else if (square_from, square_to) == (global::E1, global::G1) {
+                self.pieces[global::F1 as usize] = self.pieces[global::H1 as usize];
+                self.pieces[global::H1 as usize] = 0;
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e8c8
-            else if (square_from, square_to) == (60, 58) {
-                self.pieces[60] = self.pieces[56];
-                self.pieces[56] = 0;
+            else if (square_from, square_to) == (global::E8, global::C8) {
+                self.pieces[global::D8 as usize] = self.pieces[global::A8 as usize];
+                self.pieces[global::A8 as usize] = 0;
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;
             }
             //e8g8
-            else if (square_from, square_to) == (60, 62) {
-                self.pieces[60] = self.pieces[63];
-                self.pieces[63] = 0;
+            else if (square_from, square_to) == (global::E8, global::G8) {
+                self.pieces[global::F8 as usize] = self.pieces[global::H8 as usize];
+                self.pieces[global::H8 as usize] = 0;
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;

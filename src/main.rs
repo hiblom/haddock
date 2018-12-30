@@ -66,8 +66,8 @@ fn main() {
                 }
                 true
             },
-            Some(InputCommand::Go) => {
-                match game_channel.send(InputCommand::Go) {
+            Some(InputCommand::Go(args)) => {
+                match game_channel.send(InputCommand::Go(args)) {
                     Ok(_) => (),
                     Err(e) => println!("Error sending command : {}", e)
                 }

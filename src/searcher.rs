@@ -2,7 +2,7 @@ extern crate rand;
 
 use std::sync::mpsc::Receiver;
 use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
+use std::time::{SystemTime, Duration};
 
 use crate::searchcommand::SearchCommand;
 use crate::position::Position;
@@ -15,15 +15,27 @@ use crate::global;
 
 pub struct Searcher {
     receiver: Receiver<SearchCommand>,
-    base_position: Position
+    base_position: Position,
+    wtime: u64,
+    btime: u64,
+    winc: u64,
+    binc: u64,
+    start_time: Option<SystemTime>,
+    end_time: Option<SystemTime>
 }
 
 impl Searcher {
     pub fn new(receiver: Receiver<SearchCommand>, base_position: Position) -> Searcher {
-        println!("Initializing searcher");
+        //println!("Initializing searcher");
         Searcher {
             receiver: receiver,
-            base_position: base_position
+            base_position: base_position,
+            wtime: 0,
+            btime: 0,
+            winc: 0,
+            binc: 0,
+            start_time: None,
+            end_time: None
         }
     }
 
@@ -36,18 +48,24 @@ impl Searcher {
         }
     }
 
-    fn handle_command(&self, command: &SearchCommand) -> bool {
+    fn handle_command(&mut self, command: &SearchCommand) -> bool {
         match command {
             SearchCommand::Quit => {
-                println!("Shutting down searcher");
+                //println!("Shutting down searcher");
                 return false
             },
-            SearchCommand::FindBestMove => self.handle_command_find_best_move()
+            SearchCommand::FindBestMove(wtime, btime, winc, binc) => {
+                self.wtime = *wtime;
+                self.btime = *btime;
+                self.winc = *winc;
+                self.binc = *binc;
+                self.handle_command_find_best_move();
+            }
         }
         true
     }
 
-    fn handle_command_find_best_move(&self) {
+    fn handle_command_find_best_move(&mut self) {
         //let legal_moves = generator::generate_legal_moves(&self.base_position);
         //let mut rng = rand::thread_rng();
         //let i = rng.gen_range(0, legal_moves.len());
@@ -57,11 +75,10 @@ impl Searcher {
         println!("bestmove {}", Move_::get_fen(best_move));
      }
 
-    fn search_tree(&self, max_depth: u32) -> u32 {
+    fn search_tree(&mut self, max_depth: u32) -> u32 {
         let current_pos = &self.base_position.clone();
 
-        //start the clock
-        let start = SystemTime::now();
+        self.set_times();
 
         let outcome = evaluation::evaluate(&current_pos);
         let mut tree = Tree { 
@@ -72,38 +89,110 @@ impl Searcher {
         
         let current_node = &mut tree;
 
+        let mut best_move:Option<u32> = None;
         for depth in 1 .. (max_depth + 1) {
-            let (_, _, total_nodes, pv) = Searcher::traverse_tree(current_node, current_pos);
-            let score = current_node.best_score.unwrap().score();
-            //let pv =  Move_::get_fen(current_node.best_move.unwrap());
-            let time = Searcher::get_time_elapsed_ms(start);
-            
-            let mut nps = 0;
-            if time > 0 {
-                nps = (total_nodes as u64) * 1000 / time;
+            let (stopped, _, _, total_nodes, pv) = self.traverse_tree(current_node, current_pos);
+            if !stopped {
+                best_move = current_node.best_move;
+                //println!("best move so far {}", Move_::get_fen(best_move.unwrap()));
+                let score = current_node.best_score.unwrap().to_uci_score(current_pos.active_color);
+                let time = self.get_time_elapsed_ms();
+                
+                let mut nps = 0;
+                if time > 0 {
+                    nps = (total_nodes as u64) * 1000 / time;
+                }
+
+                let pv_string = Searcher::get_moves_string(&pv);
+
+                println!("info depth {} score {} time {} nodes {} nps {} pv {}", depth, score, time, total_nodes, nps, pv_string);
             }
-
-            let pv_string = Searcher::get_moves_string(&pv);
-
-            println!("info depth {} score cp {} time {} nodes {} nps {} pv {}", depth, score, time, total_nodes, nps, pv_string);
         }
 
-        return current_node.best_move.unwrap();
-
-
+        return best_move.unwrap(); //some move HAS to be found...
     }
 
-    fn get_time_elapsed_ms(start: SystemTime) -> u64 {
-        let dur = SystemTime::now().duration_since(start).expect("SystemTime::duration_since failed");
-        1000 * dur.as_secs() + (dur.subsec_millis() as u64)
+    fn set_times(&mut self) {
+        //start the clock
+        self.start_time = Some(SystemTime::now());
+
+        let mut turn_duration = 0;
+        if self.base_position.active_color == global::COLOR_WHITE && self.wtime > 0 {
+            turn_duration = self.get_turn_duration(self.wtime);
+        }
+        else if self.base_position.active_color == global::COLOR_BLACK && self.btime > 0 {
+            turn_duration = self.get_turn_duration(self.btime);
+        }
+
+        if turn_duration > 0 {
+            self.end_time = Some(self.start_time.unwrap() + Duration::from_millis(turn_duration as u64));
+        }
+        else {
+            self.end_time = None;
+        }
+
+        //TODO max depth, infinite, etc
     }
 
-    fn traverse_tree(node: &mut Tree, position: &Position) -> (Option<Outcome>, Option<u32>, u32, Vec<u32>) {
-        //check for stop signal here
+    fn get_time_elapsed_ms(&self) -> u64 {
+        match self.start_time {
+            Some(t) => {
+                let dur = SystemTime::now().duration_since(t).expect("SystemTime::duration_since failed");
+                1000 * dur.as_secs() + (dur.subsec_millis() as u64)
+            }
+            None => 0
+        }
+    }
+
+    fn get_turn_duration(&self, total_time_left: u64) -> u64 {
+        //TODO better time management
+        //assume game is 100 turns
+        if self.base_position.fullmovenumber < 90 {
+            let turn_duration = total_time_left / (100 - self.base_position.fullmovenumber as u64);
+            println!("turn duration set to {} ms", turn_duration);
+            turn_duration
+        }
+        else {
+            //i don't know, how about 1000 ms
+            1000
+        }
+    }
+
+    fn must_stop(&self) -> bool {
+        match self.end_time {
+            Some(t) => if SystemTime::now() > t {
+                return true;
+            } 
+            else {
+                return false;
+            },
+            None => false
+        }
+
+        //todo stop signal (quit or stop command)
+    }
+
+    fn traverse_tree(&self, node: &mut Tree, position: &Position) -> (bool, Option<Outcome>, Option<u32>, u32, Vec<u32>) {
+        if self.must_stop() {
+            return (true, None, None, 0, Vec::new());
+        }
+
         let mut current_nodes = 0u32;
         let mut pv: Vec<u32> = Vec::new();
-        match node.sub_trees {
-            Some(_) => {
+        match node.best_score {
+            Some(mut s) => {
+                //go back when we reached an end (mate, draw)
+                if s.end() {
+                    //increase mate count
+                    if position.active_color == global::COLOR_BLACK {
+                        match s {
+                            Outcome::WhiteIsMate(n) => s = Outcome::WhiteIsMate(n + 1),
+                            Outcome::BlackIsMate(n) => s = Outcome::BlackIsMate(n + 1),
+                            _ => ()
+                        }
+                    }
+                    return (false, Some(s), node.best_move, current_nodes,  Vec::new())
+                }
                 //we must go deeper
                 node.best_score = None;
                 node.best_move = None;
@@ -112,17 +201,11 @@ impl Searcher {
                     for (move_, sub_tree) in sub_trees.iter_mut() {
                         let mut pos = position.clone();
                         pos.apply_move(*move_);
-                        let (sub_best_score, _, sub_nodes, sub_pv) = Searcher::traverse_tree(sub_tree, &pos);
-                        current_nodes += sub_nodes;
-
-                        //println!("found best sub move {}", Move_::get_fen(sub_best_move.unwrap())); 
-
-                        if sub_pv.len() > 2 {
-                            println!("evaluated sub pv {} {} with score {}", 
-                                Move_::get_fen(*move_),
-                                Searcher::get_moves_string(&sub_pv), 
-                                sub_best_score.unwrap().score());
+                        let (stop, sub_best_score, _, sub_nodes, sub_pv) = self.traverse_tree(sub_tree, &pos);
+                        if stop {
+                            return (true, None, None, 0, Vec::new());
                         }
+                        current_nodes += sub_nodes;
 
                         if Searcher::is_better_outcome(&sub_best_score, &node.best_score, position.active_color) {
                             node.best_score = sub_best_score;
@@ -132,7 +215,10 @@ impl Searcher {
 
                     }
                     node.sub_trees = Some(sub_trees);
-                    pv.push(node.best_move.unwrap());
+                    match node.best_move {
+                        Some(m) => pv.push(m),
+                        None => ()
+                    }
                     pv.append(&mut best_sub_pv);
                 }
             },
@@ -157,10 +243,13 @@ impl Searcher {
                 }
                 current_nodes += legal_moves.len() as u32;
                 node.sub_trees = Some(sub_trees);
-                pv.push(node.best_move.unwrap());
+                match node.best_move {
+                    Some(m) => pv.push(m),
+                    None => ()
+                }
             }
         }
-        (node.best_score, node.best_move, current_nodes, pv)
+        (false, node.best_score, node.best_move, current_nodes, pv)
     }
 
     fn is_better_outcome(score: &Option<Outcome>, current_best_score: &Option<Outcome>, active_color: u8) -> bool {
