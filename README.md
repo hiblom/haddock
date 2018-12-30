@@ -7,10 +7,10 @@ TODO before it is fully functional
 
 * implement concept of win/loss/draw
 * implement all UCI input
-* position evaluation
-* search tree
 
 and further....
+* faster move generation
+* better evaluation
 * opening books
 * hash tables
 * etc...
