@@ -8,6 +8,7 @@ extern crate lazy_static;
 mod macros;
 
 mod global;
+mod searchtype;
 mod command;
 mod uci;
 mod square;

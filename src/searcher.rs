@@ -3,7 +3,10 @@ extern crate rand;
 use std::sync::mpsc::Receiver;
 use std::collections::HashMap;
 use std::time::{SystemTime, Duration};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
+use crate::searchtype::SearchType;
 use crate::searchcommand::SearchCommand;
 use crate::position::Position;
 use crate::generator;
@@ -16,26 +19,21 @@ use crate::global;
 pub struct Searcher {
     receiver: Receiver<SearchCommand>,
     base_position: Position,
-    wtime: u64,
-    btime: u64,
-    winc: u64,
-    binc: u64,
+    search_type: Option<SearchType>,
     start_time: Option<SystemTime>,
-    end_time: Option<SystemTime>
+    end_time: Option<SystemTime>,
+    stop_signal: Arc<AtomicBool>
 }
 
 impl Searcher {
-    pub fn new(receiver: Receiver<SearchCommand>, base_position: Position) -> Searcher {
-        //println!("Initializing searcher");
+    pub fn new(receiver: Receiver<SearchCommand>, base_position: Position, stop_signal: Arc<AtomicBool>) -> Searcher {
         Searcher {
             receiver: receiver,
             base_position: base_position,
-            wtime: 0,
-            btime: 0,
-            winc: 0,
-            binc: 0,
+            search_type: None,
             start_time: None,
-            end_time: None
+            end_time: None,
+            stop_signal: stop_signal
         }
     }
 
@@ -51,14 +49,10 @@ impl Searcher {
     fn handle_command(&mut self, command: &SearchCommand) -> bool {
         match command {
             SearchCommand::Quit => {
-                //println!("Shutting down searcher");
                 return false
             },
-            SearchCommand::FindBestMove(wtime, btime, winc, binc) => {
-                self.wtime = *wtime;
-                self.btime = *btime;
-                self.winc = *winc;
-                self.binc = *binc;
+            SearchCommand::FindBestMove(search_type) => {
+                self.search_type = Some(*search_type);
                 self.handle_command_find_best_move();
             }
         }
@@ -66,16 +60,17 @@ impl Searcher {
     }
 
     fn handle_command_find_best_move(&mut self) {
-        //let legal_moves = generator::generate_legal_moves(&self.base_position);
-        //let mut rng = rand::thread_rng();
-        //let i = rng.gen_range(0, legal_moves.len());
+        let mut max_depth = 1000;
+        match self.search_type {
+            Some(SearchType::Depth(n)) => max_depth = n,
+            _ => ()
+        }
 
-        let best_move = self.search_tree(4);
-
+        let best_move = self.search_tree(max_depth);
         println!("bestmove {}", Move_::get_fen(best_move));
      }
 
-    fn search_tree(&mut self, max_depth: u32) -> u32 {
+    fn search_tree(&mut self, max_depth: u64) -> u32 {
         let current_pos = &self.base_position.clone();
 
         self.set_times();
@@ -92,20 +87,26 @@ impl Searcher {
         let mut best_move:Option<u32> = None;
         for depth in 1 .. (max_depth + 1) {
             let (stopped, _, _, total_nodes, pv) = self.traverse_tree(current_node, current_pos);
-            if !stopped {
-                best_move = current_node.best_move;
-                //println!("best move so far {}", Move_::get_fen(best_move.unwrap()));
-                let score = current_node.best_score.unwrap().to_uci_score(current_pos.active_color);
-                let time = self.get_time_elapsed_ms();
-                
-                let mut nps = 0;
-                if time > 0 {
-                    nps = (total_nodes as u64) * 1000 / time;
-                }
+            if stopped {
+                break;
+            }
 
-                let pv_string = Searcher::get_moves_string(&pv);
+            best_move = current_node.best_move;
+            //println!("best move so far {}", Move_::get_fen(best_move.unwrap()));
+            let score = current_node.best_score.unwrap().to_uci_score(current_pos.active_color);
+            let time = self.get_time_elapsed_ms();
+            
+            let mut nps = 0;
+            if time > 0 {
+                nps = (total_nodes as u64) * 1000 / time;
+            }
 
-                println!("info depth {} score {} time {} nodes {} nps {} pv {}", depth, score, time, total_nodes, nps, pv_string);
+            let pv_string = Searcher::get_moves_string(&pv);
+
+            println!("info depth {} score {} time {} nodes {} nps {} pv {}", depth, score, time, total_nodes, nps, pv_string);
+
+            if current_node.best_score.unwrap().end() {
+                break;
             }
         }
 
@@ -113,15 +114,22 @@ impl Searcher {
     }
 
     fn set_times(&mut self) {
-        //start the clock
         self.start_time = Some(SystemTime::now());
 
         let mut turn_duration = 0;
-        if self.base_position.active_color == global::COLOR_WHITE && self.wtime > 0 {
-            turn_duration = self.get_turn_duration(self.wtime);
-        }
-        else if self.base_position.active_color == global::COLOR_BLACK && self.btime > 0 {
-            turn_duration = self.get_turn_duration(self.btime);
+        match self.search_type {
+            Some(SearchType::CTime(wtime, btime, _, _)) => {
+                if self.base_position.active_color == global::COLOR_WHITE && wtime > 0 {
+                    turn_duration = self.get_turn_duration(wtime);
+                }
+                else if self.base_position.active_color == global::COLOR_BLACK && btime > 0 {
+                    turn_duration = self.get_turn_duration(btime);
+                }
+            },
+            Some(SearchType::MoveTime(move_time)) => {
+                turn_duration = move_time;
+            },
+            _ => ()
         }
 
         if turn_duration > 0 {
@@ -130,8 +138,6 @@ impl Searcher {
         else {
             self.end_time = None;
         }
-
-        //TODO max depth, infinite, etc
     }
 
     fn get_time_elapsed_ms(&self) -> u64 {
@@ -159,17 +165,19 @@ impl Searcher {
     }
 
     fn must_stop(&self) -> bool {
+        if self.stop_signal.load(Ordering::Relaxed) {
+            return true;
+        }
+
         match self.end_time {
             Some(t) => if SystemTime::now() > t {
-                return true;
+                true
             } 
             else {
-                return false;
+                false
             },
             None => false
         }
-
-        //todo stop signal (quit or stop command)
     }
 
     fn traverse_tree(&self, node: &mut Tree, position: &Position) -> (bool, Option<Outcome>, Option<u32>, u32, Vec<u32>) {

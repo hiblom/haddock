@@ -25,8 +25,8 @@ impl Outcome {
 
     pub fn to_uci_score(&self, active_color: u8) -> String {
         let mult = match active_color {
-            global::COLOR_WHITE => 1,
-            _ => -1
+            global::COLOR_WHITE => -1,
+            _ => 1
         };
 
         match self {

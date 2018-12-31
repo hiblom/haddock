@@ -6,6 +6,7 @@ extern crate lazy_static;
 mod macros;
 
 mod global;
+mod searchtype;
 mod command;
 mod uci;
 mod square;
@@ -59,18 +60,16 @@ fn main() {
             Some(InputCommand::Quit) => {
                 false
             },
+            Some(InputCommand::Stop) => {
+                game_channel.send(InputCommand::Stop).expect("Error sending command");
+                true
+            },
             Some(InputCommand::Position(args)) => {
-                match game_channel.send(InputCommand::Position(args)) {
-                    Ok(_) => (),
-                    Err(e) => println!("Error sending command : {}", e)
-                }
+                game_channel.send(InputCommand::Position(args)).expect("Error sending command");
                 true
             },
             Some(InputCommand::Go(args)) => {
-                match game_channel.send(InputCommand::Go(args)) {
-                    Ok(_) => (),
-                    Err(e) => println!("Error sending command : {}", e)
-                }
+                game_channel.send(InputCommand::Go(args)).expect("Error sending command");
                 true
             },
             Some(c) => {
@@ -92,10 +91,7 @@ fn main() {
     }
 
     // wait till game thread finished
-    match game_channel.send(InputCommand::Quit) {
-        Ok(_) => (),
-        Err(e) => println!("Error during cleanup : {}", e)
-    }
+    game_channel.send(InputCommand::Quit).expect("Error cleaning up");
     game_handle.join().unwrap();
 
     //terminate console thread how??

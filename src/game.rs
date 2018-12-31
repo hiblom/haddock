@@ -1,7 +1,10 @@
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 use std::thread;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
+use crate::searchtype::SearchType;
 use crate::command::InputCommand;
 use crate::parser;
 use crate::position::Position;
@@ -14,17 +17,19 @@ pub struct Game {
     receiver: Receiver<InputCommand>,
     position: Option<Position>,
     searcher_handle: Option<thread::JoinHandle<()>>,
-    searcher_channel: Option<Sender<SearchCommand>>
+    searcher_channel: Option<Sender<SearchCommand>>,
+    stop_signal: Arc<AtomicBool>
 }
 
-impl Game {
+impl<'a> Game {
     pub fn new(receiver: Receiver<InputCommand>) -> Game {
         println!("Initializing game");
         Game {
             receiver: receiver,
             position: None,
             searcher_handle: None,
-            searcher_channel: None
+            searcher_channel: None,
+            stop_signal: Arc::new(AtomicBool::new(false))
         }
     }
 
@@ -42,6 +47,7 @@ impl Game {
     fn handle_command(&mut self, command: &InputCommand) -> bool {
         match command {
             InputCommand::Quit => self.handle_command_quit(),
+            InputCommand::Stop => self.handle_command_stop(),
             InputCommand::Position(args) => self.handle_command_position(&args),
             InputCommand::Go(args) => self.handle_command_go(&args),
             _ => {
@@ -52,9 +58,14 @@ impl Game {
     }
 
     fn handle_command_quit(&mut self) -> bool {
+        self.stop_signal.store(true, Ordering::Relaxed);
         self.cleanup_searcher();
-        println!("Shutting down game");
         false
+    }
+
+    fn handle_command_stop(&mut self) -> bool {
+        self.stop_signal.store(true, Ordering::Relaxed);
+        true
     }
 
     fn handle_command_position(&mut self, args: &str) -> bool {
@@ -131,68 +142,84 @@ impl Game {
     fn handle_command_go(&mut self, args: &str) -> bool {
         let args_parts = args.split(" ").collect::<Vec<&str>>();
 
-        let mut wtime = 0;
-        let mut btime = 0;
-        let mut winc = 0;
-        let mut binc = 0;
+        let mut search_type = SearchType::Infinite;
 
         let mut i: usize = 0;
         while i < args_parts.len() {
             match args_parts[i] {
+                "infinite" => {
+                    search_type = SearchType::Infinite
+                },
+                "depth" => {
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    search_type = SearchType::Depth(value);
+                },
+                "nodes" => {
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    search_type = SearchType::Nodes(value);
+                },
+                "movetime" => {
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    search_type = SearchType::MoveTime(value);
+                },
                 "wtime" => {
-                    if args_parts.len() > i {
-                        match args_parts[i + 1].parse::<u64>() {
-                            Ok(n) => {
-                                wtime = n;
-                                i += 1;
-                            },
-                            Err(_) => {
-                                println!("Could not parse wtime");
-                                return true;
-                            }
-                        }
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    if let SearchType::CTime(ref mut wtime, _, _, _) = search_type {
+                        *wtime = value;
+                    } else {
+                        search_type = SearchType::CTime(value, 0, 0, 0);
                     }
                 },
                 "btime" => {
-                    if args_parts.len() > i {
-                        match args_parts[i + 1].parse::<u64>() {
-                            Ok(n) => {
-                                btime = n;
-                                i += 1;
-                            },
-                            Err(_) => {
-                                println!("Could not parse btime");
-                                return true;
-                            }
-                        }
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    if let SearchType::CTime(_, ref mut btime, _, _) = search_type {
+                        *btime = value;
+                    } else {
+                        search_type = SearchType::CTime(0, value, 0, 0);
                     }
                 },
                 "winc" => {
-                    if args_parts.len() > i {
-                        match args_parts[i + 1].parse::<u64>() {
-                            Ok(n) => {
-                                winc = n;
-                                i += 1;
-                            },
-                            Err(_) => {
-                                println!("Could not parse winc");
-                                return true;
-                            }
-                        }
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    if let SearchType::CTime(_, _, ref mut winc, _) = search_type {
+                        *winc = value;
+                    } else {
+                        search_type = SearchType::CTime(0, 0, value, 0);
                     }
                 },
                 "binc" => {
-                    if args_parts.len() > i {
-                        match args_parts[i + 1].parse::<u64>() {
-                            Ok(n) => {
-                                binc = n;
-                                i += 1;
-                            },
-                            Err(_) => {
-                                println!("Could not parse binc");
-                                return true;
-                            }
-                        }
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    if let SearchType::CTime(_, _, _, ref mut binc) = search_type {
+                        *binc = value;
+                    } else {
+                        search_type = SearchType::CTime(0, 0, 0, value);
                     }
                 },
                 _ => ()
@@ -209,14 +236,30 @@ impl Game {
             None => return true
         }
 
-        sender.send(SearchCommand::FindBestMove(wtime, btime, winc, binc)).
+        sender.send(SearchCommand::FindBestMove(search_type)).
             expect("Error while sending search command");
 
         true
     }
 
+    fn get_numeric_value(args_parts: &Vec<&str>, i: usize) -> (bool, u64) {
+        if args_parts.len() < i {
+            return (false, 0);
+        }
+        match args_parts[i].parse::<u64>() {
+            Ok(n) => {
+                (true, n)
+            },
+            Err(_) => {
+                println!("Could not parse number");
+                (false, 0)
+            }
+        }
+    }
+
     fn setup_search(&mut self) {
         //cleanup current search, if needed
+        self.stop_signal.store(false, Ordering::Relaxed);
         self.cleanup_searcher();
 
         let (sender_request, receiver_request): (Sender<SearchCommand>, Receiver<SearchCommand>) = mpsc::channel();
@@ -231,8 +274,10 @@ impl Game {
             }
         }
 
+        let stop_signal_clone = self.stop_signal.clone();
+
         self.searcher_handle = Some(thread::spawn(move || {
-            let mut searcher = Searcher::new(receiver_request, position_clone);
+            let mut searcher = Searcher::new(receiver_request, position_clone, stop_signal_clone);
             searcher.start();
         }));
 
@@ -243,7 +288,7 @@ impl Game {
         match &self.searcher_channel {
             Some(sc) => {
                 sc.send(SearchCommand::Quit).expect("Error while sending search command");
-                if let Some(sh) = self.searcher_handle.take() { //take is fucking awesome!!!
+                if let Some(sh) = self.searcher_handle.take() {
                     sh.join().expect("Error while synchronizing with search thread");
                     self.searcher_handle = None;
                     self.searcher_channel = None

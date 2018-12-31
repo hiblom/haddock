@@ -1,6 +1,6 @@
-#[allow(dead_code)]
+use crate::searchtype::SearchType;
 
 pub enum SearchCommand {
     Quit,
-    FindBestMove(u64, u64, u64, u64)
+    FindBestMove(SearchType)
 }

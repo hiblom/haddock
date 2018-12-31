@@ -82,10 +82,10 @@ pub fn evaluate(position: &Position) -> Outcome {
     let check_mate = check && no_legal_moves_left;
     if check_mate {
         if position.active_color == global::COLOR_WHITE {
-            return Outcome::WhiteIsMate(0)
+            return Outcome::WhiteIsMate(1)
         }
         else {
-            return Outcome::BlackIsMate(0)
+            return Outcome::BlackIsMate(1)
         }
     }
 
