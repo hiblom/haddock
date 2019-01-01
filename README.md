@@ -1,16 +1,18 @@
 # haddock
 Haddock is a UCI compatible chess engine, written in Rust
 
-It is not yet functional
+Version 0.1.0 Features
+ * Mailbox board representation
+ * Iterative deepening / Minimax search strategy
+ 
+Roadmap
 
-TODO before it is fully functional
-
-* implement concept of win/loss/draw
-* implement all UCI input
-
-and further....
+* speed benchmarks for move generation and evaluation
 * faster move generation
 * better evaluation
+* implement all UCI commands
+* move ordering & pruning
 * opening books
+* end-game tables
 * hash tables
 * etc...

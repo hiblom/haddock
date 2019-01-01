@@ -9,16 +9,16 @@ pub enum Outcome {
     BlackIsMate(u16),
     DrawByStalemate,
     DrawByHalfmoveclock,
-    DrawByRepetition,
-    DrawByInsufficientMaterial
+    #[allow(dead_code)] DrawByRepetition,
+    #[allow(dead_code)] DrawByInsufficientMaterial
 }
 
 impl Outcome {
     pub fn score(&self) -> i16 {
         match self {
             Outcome::Undecided(material_value) => *material_value,
-            Outcome::WhiteIsMate(_) => -10000,
-            Outcome::BlackIsMate(_) => 10000,
+            Outcome::WhiteIsMate(_) => -20000,
+            Outcome::BlackIsMate(_) => 20000,
             _ => 0
         }
     }

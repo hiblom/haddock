@@ -5,24 +5,24 @@ extern crate ctrlc;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
-mod macros;
+pub mod macros;
 
-mod global;
-mod searchtype;
-mod command;
-mod uci;
-mod square;
-mod move_;
-mod piece;
-mod game;
-mod position;
-mod parser;
-mod piecemove;
-mod generator;
-mod searchcommand;
-mod searcher;
-mod outcome;
-mod evaluation;
-mod tree;
+pub mod global;
+pub mod searchtype;
+pub mod command;
+pub mod uci;
+pub mod square;
+pub mod move_;
+pub mod piece;
+pub mod game;
+pub mod position;
+pub mod parser;
+pub mod piecemove;
+pub mod generator;
+pub mod searchcommand;
+pub mod searcher;
+pub mod outcome;
+pub mod evaluation;
+pub mod tree;
 
 mod tests;
