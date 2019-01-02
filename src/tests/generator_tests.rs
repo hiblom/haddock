@@ -140,7 +140,7 @@ fn test_rook_moves_middle() {
 
     //act
     let moves = match position {
-        Some(pos) => crate::generator::generate_rook_moves(&pos, sq("d4"), crate::global::COLOR_WHITE),
+        Some(pos) => crate::generator::generate_normal_piece_moves(&pos, sq("d4"), crate::global::COLOR_WHITE),
         None => Vec::new(),
     };
 
@@ -184,7 +184,7 @@ fn test_rook_moves_corner() {
 
     //act
     let moves = match position {
-        Some(pos) => crate::generator::generate_rook_moves(&pos, sq("h8"), crate::global::COLOR_WHITE),
+        Some(pos) => crate::generator::generate_normal_piece_moves(&pos, sq("h8"), crate::global::COLOR_WHITE),
         None => Vec::new(),
     };
 
@@ -217,7 +217,7 @@ fn test_rook_moves_other_pieces() {
 
     //act
     let moves = match position {
-        Some(pos) => crate::generator::generate_rook_moves(&pos, sq("h8"), crate::global::COLOR_WHITE),
+        Some(pos) => crate::generator::generate_normal_piece_moves(&pos, sq("h8"), crate::global::COLOR_WHITE),
         None => Vec::new(),
     };
 
@@ -255,7 +255,7 @@ fn test_knight_moves_middle() {
 
     //act
     let moves = match position {
-        Some(pos) => crate::generator::generate_knight_moves(&pos, sq("d4"), crate::global::COLOR_WHITE),
+        Some(pos) => crate::generator::generate_normal_piece_moves(&pos, sq("d4"), crate::global::COLOR_WHITE),
         None => Vec::new(),
     };
 
@@ -302,7 +302,7 @@ fn test_knight_moves_corner() {
     //act
     let moves = match position {
         Some(pos) => {
-            crate::generator::generate_knight_moves(&pos, sq("h1"), crate::global::COLOR_WHITE)
+            crate::generator::generate_normal_piece_moves(&pos, sq("h1"), crate::global::COLOR_WHITE)
         }
         None => Vec::new(),
     };
@@ -342,7 +342,7 @@ fn test_knight_moves_startpos_b1() {
     ];
 
     //act
-    let moves = crate::generator::generate_knight_moves(&position, sq("b1"), crate::global::COLOR_WHITE);
+    let moves = crate::generator::generate_normal_piece_moves(&position, sq("b1"), crate::global::COLOR_WHITE);
 
     //assert
     println!("expected_moves moves:");
@@ -470,7 +470,7 @@ fn test_bishop_moves_middle() {
     ];
     
     //act
-    let moves = crate::generator::generate_bishop_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
+    let moves = crate::generator::generate_normal_piece_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
 
     //assert
     assert_eq!(
@@ -503,7 +503,7 @@ fn test_bishop_moves_edge() {
     ];
     
     //act
-    let moves = crate::generator::generate_bishop_moves(&position, sq("h4"), crate::global::COLOR_WHITE);
+    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h4"), crate::global::COLOR_WHITE);
 
     //assert
     assert_eq!(
@@ -532,7 +532,7 @@ fn test_bishop_moves_other_pieces() {
     ];
     
     //act
-    let moves = crate::generator::generate_bishop_moves(&position, sq("h4"), crate::global::COLOR_WHITE);
+    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h4"), crate::global::COLOR_WHITE);
 
     //assert
     println!("expected_moves moves:");

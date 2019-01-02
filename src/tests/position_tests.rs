@@ -47,7 +47,7 @@ fn test_apply_move_castling_e1g1() {
     //white castling false
     //halfmove clock up 1
     //active color black
-    let ex_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQR1K1 b kq - 1 1";
+    let ex_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQ1RK1 b kq - 1 1";
     let ex_fen_parts = ex_fen.split(" ").collect::<Vec<&str>>();
     let ex_pos = crate::parser::parse_fen(&ex_fen_parts).unwrap();
 
