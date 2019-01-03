@@ -1,6 +1,6 @@
 use crate::global;
 use crate::position::Position;
-use crate::piece::Piece;
+use crate::piecetype::PieceType;
 use crate::square::Square;
 use crate::square::SquareFactory;
 
@@ -111,10 +111,10 @@ fn parse_fen_pieces(position: &mut Position, fen_pieces: &str) -> bool {
                 },
                 None => ()
             }
-            match Piece::from_char(c) {
-                Some(piece) => {
-                    position.pieces[SquareFactory::create(x, y) as usize] = piece;
-                    x+= 1;
+            match PieceType::from_char(c) {
+                Some(piece_type) => {
+                    position.set_piece(SquareFactory::create(x, y), piece_type);
+                    x += 1;
                 },
                 None => return false
             }
@@ -131,11 +131,11 @@ fn parse_fen_color(position: &mut Position, fen_color: &str) -> bool {
 
     let lc = fen_color.to_ascii_lowercase();
     if lc == "w" {
-        position.active_color = global::COLOR_WHITE;
+        position.set_active_color(global::COLOR_WHITE);
         return true;
     }
     else if lc == "b" {
-        position.active_color = global::COLOR_BLACK;
+        position.set_active_color(global::COLOR_BLACK);
         return true;
     }
 
@@ -147,10 +147,10 @@ fn parse_fen_castling(position: &mut Position, fen_castling: &str) -> bool {
         return false;
     }
 
-    position.castling_status[0] = fen_castling.contains('K');
-    position.castling_status[1] = fen_castling.contains('Q');
-    position.castling_status[2] = fen_castling.contains('k');
-    position.castling_status[3] = fen_castling.contains('q');
+    position.set_castling_status(0, fen_castling.contains('K'));
+    position.set_castling_status(1, fen_castling.contains('Q'));
+    position.set_castling_status(2, fen_castling.contains('k'));
+    position.set_castling_status(3, fen_castling.contains('q'));
 
     true
 }
@@ -163,7 +163,7 @@ fn parse_fen_enpassant(position: &mut Position, fen_enpassant: &str) -> bool {
     let square = Square::from_str(fen_enpassant);
 
     match square {
-        Some(found_square) => position.enpassant_square = Some(found_square),
+        Some(found_square) => position.set_enpassant_square(Some(found_square)),
         None => return false
     }
 
@@ -172,7 +172,7 @@ fn parse_fen_enpassant(position: &mut Position, fen_enpassant: &str) -> bool {
 
 fn parse_fen_halfmoveclock(position: &mut Position, fen_halfmoveclock: &str) -> bool {
     match fen_halfmoveclock.parse::<u32>() {
-        Ok(n) => position.halfmoveclock = n,
+        Ok(n) => position.set_halfmoveclock(n),
         Err(_) => return false
     }
     true
@@ -180,7 +180,7 @@ fn parse_fen_halfmoveclock(position: &mut Position, fen_halfmoveclock: &str) -> 
 
 fn parse_fen_fullmovenumber(position: &mut Position, fen_fullmovenumber: &str) -> bool {
     match fen_fullmovenumber.parse::<u32>() {
-        Ok(found_u32) => position.fullmovenumber = found_u32,
+        Ok(n) => position.set_fullmovenumber(n),
         Err(_) => return false
     }
     true

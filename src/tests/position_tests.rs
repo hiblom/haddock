@@ -16,22 +16,22 @@ fn test_apply_move_e2e4() {
     println!("{}", &pos);
 
     assert_eq!(
-        &ex_pos.pieces[..],
-        &pos.pieces[..],
+        &ex_pos.get_board()[..],
+        &pos.get_board()[..],
         "Pieces not as expected"
     );
     assert_eq!(
-        ex_pos.active_color,
-        pos.active_color,
+        ex_pos.get_active_color(),
+        pos.get_active_color(),
         "Color not as expected"
     );
     assert_eq!(
-        &ex_pos.castling_status, &pos.castling_status,
+        &ex_pos.get_full_castling_status(), &pos.get_full_castling_status(),
         "Castling status not as expected"
     );
-    assert_eq!(ex_pos.enpassant_square, pos.enpassant_square, "Enpassant not as expexted");
-    assert_eq!(ex_pos.halfmoveclock, pos.halfmoveclock, "Half move clock not as expected");
-    assert_eq!(ex_pos.fullmovenumber, pos.fullmovenumber, "Full move number not as expected");
+    assert_eq!(ex_pos.get_enpassant_square(), pos.get_enpassant_square(), "Enpassant not as expexted");
+    assert_eq!(ex_pos.get_halfmoveclock(), pos.get_halfmoveclock(), "Half move clock not as expected");
+    assert_eq!(ex_pos.get_fullmovenumber(), pos.get_fullmovenumber(), "Full move number not as expected");
 }
 
 #[test]
@@ -55,24 +55,25 @@ fn test_apply_move_castling_e1g1() {
     pos.apply_move(move_);
 
     //assert
+    println!("{}", &pos);
+
     assert_eq!(
-        &ex_pos.pieces[..],
-        &pos.pieces[..],
-        "Pieces not as {}", 
-        &pos
+        &ex_pos.get_board()[..],
+        &pos.get_board()[..],
+        "Pieces not as expected"
     );
     assert_eq!(
-        ex_pos.active_color,
-        pos.active_color,
+        ex_pos.get_active_color(),
+        pos.get_active_color(),
         "Color not as expected"
     );
     assert_eq!(
-        &ex_pos.castling_status, &pos.castling_status,
+        &ex_pos.get_full_castling_status(), &pos.get_full_castling_status(),
         "Castling status not as expected"
     );
-    assert_eq!(ex_pos.enpassant_square, pos.enpassant_square, "Enpassant not as expexted");
-    assert_eq!(ex_pos.halfmoveclock, pos.halfmoveclock, "Half move clock not as expected");
-    assert_eq!(ex_pos.fullmovenumber, pos.fullmovenumber, "Full move number not as expected");
+    assert_eq!(ex_pos.get_enpassant_square(), pos.get_enpassant_square(), "Enpassant not as expexted");
+    assert_eq!(ex_pos.get_halfmoveclock(), pos.get_halfmoveclock(), "Half move clock not as expected");
+    assert_eq!(ex_pos.get_fullmovenumber(), pos.get_fullmovenumber(), "Full move number not as expected");
 }
 
 #[test]
@@ -95,27 +96,27 @@ fn test_apply_move_promo_black() {
     pos.apply_move(move_);
 
     //assert
+    println!("{}", &pos);
+
     assert_eq!(
-        &ex_pos.pieces[..],
-        &pos.pieces[..],
-        "Pieces not as expected:\n{}", 
-        &pos
+        &ex_pos.get_board()[..],
+        &pos.get_board()[..],
+        "Pieces not as expected"
     );
     assert_eq!(
-        ex_pos.active_color,
-        pos.active_color,
+        ex_pos.get_active_color(),
+        pos.get_active_color(),
         "Color not as expected"
     );
     assert_eq!(
-        &ex_pos.castling_status, &pos.castling_status,
+        &ex_pos.get_full_castling_status(), &pos.get_full_castling_status(),
         "Castling status not as expected"
     );
-    assert_eq!(ex_pos.enpassant_square, pos.enpassant_square, "Enpassant square not as expexted");
-    assert_eq!(ex_pos.halfmoveclock, pos.halfmoveclock, "Half move clock not as expected");
-    assert_eq!(ex_pos.fullmovenumber, pos.fullmovenumber, "Full move number not as expected");
+    assert_eq!(ex_pos.get_enpassant_square(), pos.get_enpassant_square(), "Enpassant not as expexted");
+    assert_eq!(ex_pos.get_halfmoveclock(), pos.get_halfmoveclock(), "Half move clock not as expected");
+    assert_eq!(ex_pos.get_fullmovenumber(), pos.get_fullmovenumber(), "Full move number not as expected");
 }
 
-//todo test enpassant
 #[test]
 fn test_apply_move_en_passant() {
     let fen = "4k3/8/8/3pP3/8/8/8/4K3 w - d6 5 50";
@@ -137,22 +138,23 @@ fn test_apply_move_en_passant() {
     pos.apply_move(move_);
 
     //assert
+    println!("{}", &pos);
+
     assert_eq!(
-        &ex_pos.pieces[..],
-        &pos.pieces[..],
-        "Pieces not as expected:\n{}", 
-        &pos
+        &ex_pos.get_board()[..],
+        &pos.get_board()[..],
+        "Pieces not as expected"
     );
     assert_eq!(
-        ex_pos.active_color,
-        pos.active_color,
+        ex_pos.get_active_color(),
+        pos.get_active_color(),
         "Color not as expected"
     );
     assert_eq!(
-        &ex_pos.castling_status, &pos.castling_status,
+        &ex_pos.get_full_castling_status(), &pos.get_full_castling_status(),
         "Castling status not as expected"
     );
-    assert_eq!(ex_pos.enpassant_square, pos.enpassant_square, "Enpassant square not as expexted");
-    assert_eq!(ex_pos.halfmoveclock, pos.halfmoveclock, "Half move clock not as expected");
-    assert_eq!(ex_pos.fullmovenumber, pos.fullmovenumber, "Full move number not as expected");
+    assert_eq!(ex_pos.get_enpassant_square(), pos.get_enpassant_square(), "Enpassant not as expexted");
+    assert_eq!(ex_pos.get_halfmoveclock(), pos.get_halfmoveclock(), "Half move clock not as expected");
+    assert_eq!(ex_pos.get_fullmovenumber(), pos.get_fullmovenumber(), "Full move number not as expected");
 }

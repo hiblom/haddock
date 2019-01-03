@@ -11,7 +11,7 @@ mod command;
 mod uci;
 mod square;
 mod move_;
-mod piece;
+mod piecetype;
 mod game;
 mod position;
 mod parser;

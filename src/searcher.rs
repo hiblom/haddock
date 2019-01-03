@@ -93,7 +93,7 @@ impl Searcher {
 
             best_move = current_node.best_move;
             //println!("best move so far {}", Move_::get_fen(best_move.unwrap()));
-            let score = current_node.best_score.unwrap().to_uci_score(current_pos.active_color);
+            let score = current_node.best_score.unwrap().to_uci_score(current_pos.get_active_color());
             let time = self.get_time_elapsed_ms();
             
             let mut nps = 0;
@@ -119,10 +119,10 @@ impl Searcher {
         let mut turn_duration = 0;
         match self.search_type {
             Some(SearchType::CTime(wtime, btime, _, _)) => {
-                if self.base_position.active_color == global::COLOR_WHITE && wtime > 0 {
+                if self.base_position.get_active_color() == global::COLOR_WHITE && wtime > 0 {
                     turn_duration = self.get_turn_duration(wtime);
                 }
-                else if self.base_position.active_color == global::COLOR_BLACK && btime > 0 {
+                else if self.base_position.get_active_color() == global::COLOR_BLACK && btime > 0 {
                     turn_duration = self.get_turn_duration(btime);
                 }
             },
@@ -153,8 +153,8 @@ impl Searcher {
     fn get_turn_duration(&self, total_time_left: u64) -> u64 {
         //TODO better time management
         //assume game is 100 turns
-        if self.base_position.fullmovenumber < 90 {
-            let turn_duration = total_time_left / (100 - self.base_position.fullmovenumber as u64);
+        if self.base_position.get_fullmovenumber() < 90 {
+            let turn_duration = total_time_left / (100 - self.base_position.get_fullmovenumber() as u64);
             println!("turn duration set to {} ms", turn_duration);
             turn_duration
         }
@@ -192,7 +192,7 @@ impl Searcher {
                 //go back when we reached an end (mate, draw)
                 if s.end() {
                     //increase mate count
-                    if position.active_color == global::COLOR_BLACK {
+                    if position.get_active_color() == global::COLOR_BLACK {
                         match s {
                             Outcome::WhiteIsMate(n) => s = Outcome::WhiteIsMate(n + 1),
                             Outcome::BlackIsMate(n) => s = Outcome::BlackIsMate(n + 1),
@@ -215,7 +215,7 @@ impl Searcher {
                         }
                         current_nodes += sub_nodes;
 
-                        if Searcher::is_better_outcome(&sub_best_score, &node.best_score, position.active_color) {
+                        if Searcher::is_better_outcome(&sub_best_score, &node.best_score, position.get_active_color()) {
                             node.best_score = sub_best_score;
                             node.best_move = Some(*move_);
                             best_sub_pv = sub_pv;
@@ -244,7 +244,7 @@ impl Searcher {
                         best_move: None, 
                         sub_trees: None });
 
-                    if Searcher::is_better_outcome(&Some(outcome), &node.best_score, position.active_color) {
+                    if Searcher::is_better_outcome(&Some(outcome), &node.best_score, position.get_active_color()) {
                         node.best_score = Some(outcome);
                         node.best_move = Some(*legal_move);
                     }

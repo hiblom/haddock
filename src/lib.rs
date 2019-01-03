@@ -13,7 +13,7 @@ pub mod command;
 pub mod uci;
 pub mod square;
 pub mod move_;
-pub mod piece;
+pub mod piecetype;
 pub mod game;
 pub mod position;
 pub mod parser;

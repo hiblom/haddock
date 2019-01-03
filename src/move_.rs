@@ -1,10 +1,12 @@
 use std::marker;
 use crate::square::Square;
-use crate::piece::Piece;
+use crate::piecetype::PieceType;
 
 const MOVE_MASK_TO: u32           = 0b00000000_00000000_00000000_11111111;
 const MOVE_MASK_FROM: u32         = 0b00000000_00000000_11111111_00000000;
-const MOVE_MASK_PROMO: u32        = 0b00000000_00000001_00000000_00000000;
+const MOVE_BIT_PROMO: u32         = 0b00000000_00000001_00000000_00000000;
+const MOVE_BIT_EP: u32            = 0b00000000_00000010_00000000_00000000;
+const MOVE_BIT_CASTLING: u32      = 0b00000000_00000100_00000000_00000000;
 const MOVE_MASK_PROMO_PIECE: u32  = 0b11111111_00000000_00000000_00000000;
 
 pub trait MoveFactory {
@@ -23,8 +25,10 @@ pub trait Move_ {
     fn get_fen(self) -> String;
     fn get_squares(self) -> (u8, u8);
     fn is_promotion(self) -> bool;
-    fn get_promo_piece(self) -> u8;
-    fn create_promo_copy(self, picee: u8) -> Self;
+    fn is_castling(self) -> bool;
+    fn is_enpassant(self) -> bool;
+    fn get_promo_piece(self) -> PieceType;
+    fn create_promo_copy(self, piece: PieceType) -> Self;
 }
 
 impl Move_ for u32 {
@@ -44,10 +48,10 @@ impl Move_ for u32 {
             //must be promotion; fifth char contains the piece
             match value.chars().nth(4) {
                 Some(c) => {
-                    match Piece::from_char(c.to_ascii_uppercase()) {
-                        Some::<u8>(p) => {
-                            result |= MOVE_MASK_PROMO;
-                            result |= (p as u32) << 24;
+                    match PieceType::from_char(c.to_ascii_uppercase()) {
+                        Some(p) => {
+                            result |= MOVE_BIT_PROMO;
+                            result |= (p.to_u8() as u32) << 24;
                         },
                         None => return None
                     }
@@ -78,14 +82,14 @@ impl Move_ for u32 {
         let sq_from_str = Square::get_fen(sq_from);
         let sq_to_str = Square::get_fen(sq_to);
 
-        if self & MOVE_MASK_PROMO == 0 {
+        if self & MOVE_BIT_PROMO == 0 {
             //normal move
             return format!("{}{}", sq_from_str, sq_to_str)
         }
 
         //promotion move
-        let promo_piece: u8 = ((self & MOVE_MASK_PROMO_PIECE) >> 24) as u8;
-        let promo_piece_char = Piece::to_char(promo_piece).to_ascii_lowercase();
+        let promo_piece = PieceType::new(((self & MOVE_MASK_PROMO_PIECE) >> 24) as u8);
+        let promo_piece_char = promo_piece.to_char().to_ascii_lowercase();
 
         format!("{}{}{}", sq_from_str, sq_to_str, promo_piece_char)
     }
@@ -98,16 +102,24 @@ impl Move_ for u32 {
     }
 
     fn is_promotion(self) -> bool {
-        return self & MOVE_MASK_PROMO != 0;
+        return self & MOVE_BIT_PROMO != 0;
     }
 
-    fn get_promo_piece(self) -> u8 {
-        return ((self & MOVE_MASK_PROMO_PIECE) >> 24) as u8;
+    fn is_castling(self) -> bool {
+        return self & MOVE_BIT_CASTLING != 0;
     }
 
-    fn create_promo_copy(self, piece: u8) -> u32 {
-        let mut result = self | MOVE_MASK_PROMO;
-        result = (result & !MOVE_MASK_PROMO_PIECE) | ((piece as u32) << 24);
+    fn is_enpassant(self) -> bool {
+        return self & MOVE_BIT_EP != 0;
+    }
+
+    fn get_promo_piece(self) -> PieceType {
+        PieceType::new(((self & MOVE_MASK_PROMO_PIECE) >> 24) as u8)
+    }
+
+    fn create_promo_copy(self, piece: PieceType) -> u32 {
+        let mut result = self | MOVE_BIT_PROMO;
+        result = (result & !MOVE_MASK_PROMO_PIECE) | ((piece.to_u8() as u32) << 24);
         result
     }
 }

@@ -12,7 +12,7 @@ fn test_is_check_startpos() {
     let position = crate::parser::parse_startpos().unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.active_color);
+    let check = crate::evaluation::is_check(&position, position.get_active_color());
 
     //assert
     assert_eq!(
@@ -32,7 +32,7 @@ fn test_is_check_by_queen() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.active_color);
+    let check = crate::evaluation::is_check(&position, position.get_active_color());
 
     //assert
     assert_eq!(
@@ -51,7 +51,7 @@ fn test_is_check_by_rook() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.active_color);
+    let check = crate::evaluation::is_check(&position, position.get_active_color());
 
     //assert
     assert_eq!(
@@ -70,7 +70,7 @@ fn test_is_check_by_bishop() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.active_color);
+    let check = crate::evaluation::is_check(&position, position.get_active_color());
 
     //assert
     assert_eq!(
@@ -89,7 +89,7 @@ fn test_is_check_by_knight() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.active_color);
+    let check = crate::evaluation::is_check(&position, position.get_active_color());
 
     //assert
     assert_eq!(
@@ -108,7 +108,7 @@ fn test_is_check_by_pawn() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.active_color);
+    let check = crate::evaluation::is_check(&position, position.get_active_color());
 
     //assert
     assert_eq!(
