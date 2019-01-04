@@ -18,6 +18,7 @@ fn bench_apply_move(c: &mut Criterion) {
     let position = haddock::parser::parse_fen(&fen_parts).unwrap();
 
     let move_ = haddock::move_::Move_::from_str("d3g6").unwrap();
+    let move_ = position.analyze_move(move_);
 
     //applying the move includes cloning the position
     c.bench_function("apply move", move |b| b.iter(|| {

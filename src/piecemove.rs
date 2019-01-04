@@ -8,7 +8,7 @@ use crate::piecetype::PieceType;
 
 lazy_static! {
     static ref PRERENDERED_MOVES: HashMap<PieceType, Vec<Vec<DirectionSquares>>> = {
-        println!("Prerendering moves");
+        println!("Haddock is prerendering moves");
 
         let mut map = HashMap::new();
 
@@ -85,8 +85,8 @@ lazy_static! {
         vec![
             (
                 vec![
-                    Dir { mov: &Square::up_left, max_steps: 1, capture: true, silent: false},
-                    Dir { mov: &Square::up_right, max_steps: 1, capture: true, silent: false}],
+                    Dir { mov: &Square::up_left, max_steps: 1, capture: true, silent: true},
+                    Dir { mov: &Square::up_right, max_steps: 1, capture: true, silent: true}],
                 vec![
                     PieceType::new_pawn(COLOR_BLACK), 
                     PieceType::new_king(COLOR_WHITE), 
@@ -95,8 +95,8 @@ lazy_static! {
             ),
             (
                 vec![
-                    Dir { mov: &Square::down_left, max_steps: 1, capture: true, silent: false},
-                    Dir { mov: &Square::down_right, max_steps: 1, capture: true, silent: false}],
+                    Dir { mov: &Square::down_left, max_steps: 1, capture: true, silent: true},
+                    Dir { mov: &Square::down_right, max_steps: 1, capture: true, silent: true}],
                 vec![
                     PieceType::new_pawn(COLOR_WHITE), 
                     PieceType::new_king(COLOR_WHITE), 

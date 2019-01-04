@@ -155,7 +155,7 @@ impl Searcher {
         //assume game is 100 turns
         if self.base_position.get_fullmovenumber() < 90 {
             let turn_duration = total_time_left / (100 - self.base_position.get_fullmovenumber() as u64);
-            println!("turn duration set to {} ms", turn_duration);
+            println!("Haddock is thinking for {} ms", turn_duration);
             turn_duration
         }
         else {

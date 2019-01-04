@@ -88,14 +88,14 @@ pub fn generate_normal_piece_moves(position: &Position, current_square: u8, colo
                 },
                 Some(other_piece) => {
                     if other_piece.has_color(color) {
+                        //block by piece of same color
+                        break;
+                    }
+                    else {
                         if dir_sq.capture {
                             result.push(MoveFactory::create(current_square, *sq));
                         }
                         break
-                    }
-                    else {
-                        //block by piece of same color
-                        break;
                     }
                 }
             }
@@ -108,13 +108,16 @@ pub fn generate_normal_piece_moves(position: &Position, current_square: u8, colo
 pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -> Vec<u32> {
     let mut result = generate_normal_piece_moves(position, current_square, color);
 
+    //TODO king squares cannot be attacked by other color
     //castling
     if color == COLOR_WHITE {
         if position.get_castling_status(0) {
             //white K-side
             if  position.get_piece(global::F1).is_none() && 
                 position.get_piece(global::G1).is_none() {
-                    result.push(MoveFactory::create(global::E1, global::G1));
+                    let mut mv = MoveFactory::create(global::E1, global::G1);
+                    mv.set_castling(true);
+                    result.push(mv);
             }
         }
         if position.get_castling_status(1) {
@@ -122,7 +125,9 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
             if  position.get_piece(global::B1).is_none() && 
                 position.get_piece(global::C1).is_none() && 
                 position.get_piece(global::D1).is_none() {
-                    result.push(MoveFactory::create(global::E1, global::C1));
+                    let mut mv = MoveFactory::create(global::E1, global::C1);
+                    mv.set_castling(true);
+                    result.push(mv);
             }
         }
     }
@@ -131,7 +136,9 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
             //black K-side
             if  position.get_piece(global::F8).is_none() && 
                 position.get_piece(global::G8).is_none() {
-                    result.push(MoveFactory::create(global::E8, global::G8));
+                    let mut mv = MoveFactory::create(global::E8, global::G8);
+                    mv.set_castling(true);
+                    result.push(mv);
             }
         }
         if position.get_castling_status(3) {
@@ -139,7 +146,9 @@ pub fn generate_king_moves(position: &Position, current_square: u8, color: u8) -
             if  position.get_piece(global::B8).is_none() && 
                 position.get_piece(global::C8).is_none() && 
                 position.get_piece(global::D8).is_none() {
-                    result.push(MoveFactory::create(global::E8, global::C8));
+                    let mut mv = MoveFactory::create(global::E8, global::C8);
+                    mv.set_castling(true);
+                    result.push(mv);
             }
         }
     }
@@ -176,13 +185,17 @@ pub fn generate_pawn_moves(position: &Position, current_square: u8, color: u8) -
                 if current_x > 0 {
                     let x_to = current_x - 1;
                     if x_to == ep_x {
-                        moves.push(MoveFactory::create(current_square, ep_sq));
+                        let mut mv = MoveFactory::create(current_square, ep_sq);
+                        mv.set_enpassant(true);
+                        moves.push(mv);
                     }
                 }
                 if current_x < 7 {
                     let x_to = current_x + 1;
                     if x_to == ep_x {
-                        moves.push(MoveFactory::create(current_square, ep_sq));
+                        let mut mv = MoveFactory::create(current_square, ep_sq);
+                        mv.set_enpassant(true);
+                        moves.push(mv);
                     }
                 }
             }

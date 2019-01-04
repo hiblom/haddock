@@ -191,9 +191,15 @@ impl Position {
         self.fullmovenumber
     }
 
+    fn apply_simple_move(&mut self, square_from: u8, square_to: u8) {
+        let piece_index = self.board[square_from as usize];
+        self.board[square_to as usize] = piece_index;
+        self.pieces[piece_index as usize].square = square_to;
+        self.board[square_from as usize] = -1;
+    }
 
     pub fn apply_move(&mut self, mv: u32) {
-        //NOTE all moves are checked at this point
+        //NOTE all moves should be checked at this point
         let move_ = Move_::new(mv);
         let (square_from, square_to) = move_.get_squares();
 
@@ -206,6 +212,8 @@ impl Position {
             self.remove_piece(square_to);
         }
 
+        self.apply_simple_move(square_from, square_to);
+
         //en-passant square is filled, pawn moves to it -> en-passant
         //pawn on square in front of en-passant square gets captured
         if move_.is_enpassant() {
@@ -217,43 +225,38 @@ impl Position {
 
         //promo piece only has type info, not color info
         if move_.is_promotion() {
-            self.pieces[piece_index_from as usize].piece_type = PieceType::new(move_.get_promo_piece().to_u8() | self.get_active_color());
+            let mut promo_piece = move_.get_promo_piece();
+            promo_piece.set_color(self.get_active_color());
+            self.pieces[piece_index_from as usize].piece_type = promo_piece;
         }
-
-        self.board[square_to as usize] = piece_index_from;
-        self.pieces[piece_index_from as usize].square = square_to;
 
         //castling
         let mut castled = false;
         if move_.is_castling() {
             //e1c1
             if (square_from, square_to) == (global::E1, global::C1) {
-                self.board[global::D1 as usize] = self.board[global::A1 as usize];
-                self.board[global::A1 as usize] = 0;
+                self.apply_simple_move(global::A1, global::D1);
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e1g1
             else if (square_from, square_to) == (global::E1, global::G1) {
-                self.board[global::F1 as usize] = self.board[global::H1 as usize];
-                self.board[global::H1 as usize] = 0;
+                self.apply_simple_move(global::H1, global::F1);
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e8c8
             else if (square_from, square_to) == (global::E8, global::C8) {
-                self.board[global::D8 as usize] = self.board[global::A8 as usize];
-                self.board[global::A8 as usize] = 0;
+                self.apply_simple_move(global::A8, global::D8);
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;
             }
             //e8g8
             else if (square_from, square_to) == (global::E8, global::G8) {
-                self.board[global::F8 as usize] = self.board[global::H8 as usize];
-                self.board[global::H8 as usize] = 0;
+                self.apply_simple_move(global::H8, global::F8);
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;
@@ -337,6 +340,40 @@ impl Position {
 
         //flip color
         self.active_color = 1 - self.active_color;
+    }
+
+    pub fn analyze_move(&self, mv: u32) -> u32 {
+        //find out if ep, or castling
+        //promotion is already set during parsing
+        let mut move_ = Move_::new(mv);
+        move_.set_enpassant(false);
+        move_.set_castling(false);
+
+        let (square_from, square_to) = move_.get_squares();
+        let piece = self.get_piece(square_from).unwrap();
+
+        //ep?
+        if piece.is_pawn() {
+            match self.get_enpassant_square() {
+                Some(s) => {
+                    if s == square_to {
+                        move_.set_enpassant(true);
+                    }
+                }
+                None => ()
+            }
+        }
+
+        //castling?
+        if piece.is_king() {
+            if
+                (square_from == global::E1 && (square_to == global::G1 || square_to == global::C1)) ||
+                (square_from == global::E8 && (square_to == global::G8 || square_to == global::C8)) {
+                move_.set_castling(true);
+            }
+        }
+
+        move_
     }
 }
 

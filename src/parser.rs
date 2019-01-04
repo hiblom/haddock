@@ -185,3 +185,76 @@ fn parse_fen_fullmovenumber(position: &mut Position, fen_fullmovenumber: &str) -
     }
     true
 }
+
+#[allow(dead_code)] //for testing
+pub fn get_position_fen(position: &Position) -> String {
+    let mut fen = "".to_string();
+
+    //board
+    for y in (0u8..8).rev() {
+        let mut count_empty = 0;
+        for x in 0u8..8 {
+            let sq = Square::new((y << 3) + x);
+            match position.get_piece(sq) {
+                Some(piece) => {
+                    if count_empty > 0 {
+                        fen = format!("{}{}", fen, count_empty);
+                        count_empty = 0;
+                    }
+                    fen = format!("{}{}", fen, piece.to_char());
+                },
+                None => count_empty += 1
+            }
+        }
+        if count_empty > 0 {
+            fen = format!("{}{}", fen, count_empty);
+        }
+        if y > 0 {
+            fen = format!("{}/", fen);
+        }
+    }
+
+    //active color
+    if position.get_active_color() == global::COLOR_WHITE {
+        fen = format!("{} w ", fen);
+    }
+    else {
+        fen = format!("{} b ", fen);
+    }
+
+    //castling status
+    let mut castle = false;
+    if position.get_castling_status(0) {
+        castle = true;
+        fen = format!("{}K", fen);
+    }
+    if position.get_castling_status(1) {
+        castle = true;
+        fen = format!("{}Q", fen);
+    }
+    if position.get_castling_status(2) {
+        castle = true;
+        fen = format!("{}k", fen);
+    }
+    if position.get_castling_status(3) {
+        castle = true;
+        fen = format!("{}q", fen);
+    }
+    if !castle {
+        fen = format!("{}-", fen);
+    }
+
+    //ep square
+    match position.get_enpassant_square() {
+        Some(s) => fen = format!("{} {} ", fen, Square::get_fen(s)),
+        _ => fen = format!("{} - ", fen)
+    }
+
+    //halfmoveclock
+    fen = format!("{}{} ", fen, position.get_halfmoveclock());
+
+    //fullmovenumber
+    fen = format!("{}{}", fen, position.get_fullmovenumber());
+
+    fen
+}

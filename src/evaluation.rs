@@ -4,7 +4,6 @@ use crate::global;
 use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
 
-
 use crate::position::Position;
 use crate::piecetype::PieceType;
 use crate::piecemove;
@@ -24,6 +23,8 @@ lazy_static! {
         m.insert(PieceType::new_rook(COLOR_BLACK), -500);
         m.insert(PieceType::new_queen(COLOR_WHITE), 900);
         m.insert(PieceType::new_queen(COLOR_BLACK), -900);
+        m.insert(PieceType::new_king(COLOR_WHITE), 0);
+        m.insert(PieceType::new_king(COLOR_BLACK), 0);
         m
     };
 }
@@ -31,14 +32,16 @@ lazy_static! {
 pub fn is_check(position: &Position, color: u8) -> bool {
     let other_color = 1 - color;
     match position.get_king_square(color) {
-        Some(s) => return find_square_attackers(position, s, other_color).len() > 0,
-        _ => false
+        Some(s) => {
+            return is_square_attacked(position, s, other_color);
+        },
+        _ => {
+            return false;
+        }
     }
 }
 
-pub fn find_square_attackers(position: &Position, current_square: u8, color: u8) -> Vec<u8> {
-    let mut result: Vec<u8> = Vec::new();
-
+pub fn is_square_attacked(position: &Position, current_square: u8, color: u8) -> bool {
     let king_checked_moves = piecemove::get_king_checked_moves();
 
     for dirs_pieces in king_checked_moves {
@@ -52,12 +55,9 @@ pub fn find_square_attackers(position: &Position, current_square: u8, color: u8)
                             Some(other_piece) => {
                                 if other_piece.has_color(color) {
                                     //enemy piece
-                                    let mut piece_val = other_piece.get_type();
-                                    if other_piece.is_pawn() {
-                                        piece_val |= color;
-                                    }
-                                    if dirs_pieces.1.contains(&PieceType::new(piece_val)) {
-                                        result.push(s);
+                                    let move_type = other_piece.get_move_type();
+                                    if dirs_pieces.1.contains(&move_type) {
+                                        return true;
                                     }
                                     break;
                                 }
@@ -75,7 +75,7 @@ pub fn find_square_attackers(position: &Position, current_square: u8, color: u8)
         }
     }
 
-    result
+    false
 }
 
 pub fn evaluate(position: &Position) -> Outcome {
@@ -86,10 +86,10 @@ pub fn evaluate(position: &Position) -> Outcome {
     let check_mate = check && no_legal_moves_left;
     if check_mate {
         if position.get_active_color() == global::COLOR_WHITE {
-            return Outcome::WhiteIsMate(1)
+            return Outcome::WhiteIsMate(0)
         }
         else {
-            return Outcome::BlackIsMate(1)
+            return Outcome::BlackIsMate(0)
         }
     }
 

@@ -115,6 +115,7 @@ impl<'a> Game {
                                 Some(mv) => {
                                     let moves = generator::generate_legal_moves(pos);
                                     if moves.contains(&mv) {
+                                        let mv = pos.analyze_move(mv);
                                         pos.apply_move(mv);
                                     }
                                     else {

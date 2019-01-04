@@ -27,6 +27,9 @@ pub trait Move_ {
     fn is_promotion(self) -> bool;
     fn is_castling(self) -> bool;
     fn is_enpassant(self) -> bool;
+    fn set_promotion(&mut self, value: bool);
+    fn set_castling(&mut self, value: bool);
+    fn set_enpassant(&mut self, value: bool);
     fn get_promo_piece(self) -> PieceType;
     fn create_promo_copy(self, piece: PieceType) -> Self;
 }
@@ -111,6 +114,33 @@ impl Move_ for u32 {
 
     fn is_enpassant(self) -> bool {
         return self & MOVE_BIT_EP != 0;
+    }
+
+    fn set_promotion(&mut self, value: bool) {
+        if value {
+            *self |= MOVE_BIT_PROMO;
+        }
+        else {
+            *self &= !MOVE_BIT_PROMO;
+        }
+    }
+
+    fn set_castling(&mut self, value: bool) {
+        if value {
+            *self |= MOVE_BIT_CASTLING;
+        }
+        else {
+            *self &= !MOVE_BIT_CASTLING;
+        }
+    }
+
+    fn set_enpassant(&mut self, value: bool) {
+        if value {
+            *self |= MOVE_BIT_EP;
+        }
+        else {
+            *self &= !MOVE_BIT_EP;
+        }
     }
 
     fn get_promo_piece(self) -> PieceType {

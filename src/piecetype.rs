@@ -84,6 +84,10 @@ impl PieceType {
         self.0 & MASK_COLOR
     }
 
+    pub fn set_color(&mut self, color: u8) {
+        self.0 = (self.0 & MASK_TYPE) | color;
+    }
+
     pub fn get_type(self) -> u8 {
         self.0 & MASK_TYPE
     }
@@ -104,6 +108,10 @@ impl PieceType {
 
     pub fn is_pawn(self) -> bool {
          self.0 & MASK_TYPE == PIECE_PAWN
+    }
+
+    pub fn is_king(self) -> bool {
+         self.0 & MASK_TYPE == PIECE_KING
     }
 }
 
