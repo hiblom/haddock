@@ -2,7 +2,7 @@ fn mv(mv_str: &str) -> u32 {
     crate::move_::Move_::from_str(mv_str).unwrap()
 }
 
-fn sq(sq_str: &str) -> u8 {
+fn sq(sq_str: &str) -> crate::square::Square {
     crate::square::Square::from_str(sq_str).unwrap()
 }
 

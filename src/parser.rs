@@ -2,7 +2,6 @@ use crate::global;
 use crate::position::Position;
 use crate::piecetype::PieceType;
 use crate::square::Square;
-use crate::square::SquareFactory;
 
 pub fn parse_startpos() -> Option<Position> {
     let fen_parts = global::FEN_STARTPOS.split(" ").collect::<Vec<&str>>();
@@ -113,7 +112,7 @@ fn parse_fen_pieces(position: &mut Position, fen_pieces: &str) -> bool {
             }
             match PieceType::from_char(c) {
                 Some(piece_type) => {
-                    position.set_piece(SquareFactory::create(x, y), piece_type);
+                    position.set_piece(Square::from_xy(x as u8, y as u8), piece_type);
                     x += 1;
                 },
                 None => return false
@@ -246,7 +245,7 @@ pub fn get_position_fen(position: &Position) -> String {
 
     //ep square
     match position.get_enpassant_square() {
-        Some(s) => fen = format!("{} {} ", fen, Square::get_fen(s)),
+        Some(s) => fen = format!("{} {} ", fen, s.to_fen()),
         _ => fen = format!("{} - ", fen)
     }
 

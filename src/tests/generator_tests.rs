@@ -3,7 +3,7 @@ fn mv(pos: &crate::position::Position, mv_str: &str) -> u32 {
     pos.analyze_move(move_)
 }
 
-fn sq(sq_str: &str) -> u8 {
+fn sq(sq_str: &str) -> crate::square::Square {
     crate::square::Square::from_str(sq_str).unwrap()
 }
 

@@ -153,14 +153,14 @@ lazy_static! {
 
 
 pub struct Dir {
-    pub mov: &'static (Fn(u8) -> Option<u8> + Sync),
+    pub mov: &'static (Fn(Square) -> Option<Square> + Sync),
     pub max_steps: u8,
     pub capture: bool,
     pub silent: bool
 }
 
 pub struct DirectionSquares {
-    pub squares: Vec<u8>,
+    pub squares: Vec<Square>,
     pub capture: bool,
     pub silent: bool
 }
@@ -173,20 +173,20 @@ pub fn get_king_checked_moves<'a>() -> &'a Vec<(Vec<Dir>, Vec<PieceType>)> {
     &KING_CHECKED
 }
 
-pub fn get_prerendered_target_squares<'a>(piece_type: PieceType, square: u8) -> &'a Vec<DirectionSquares> {
-    &PRERENDERED_MOVES[&piece_type][square as usize]
+pub fn get_prerendered_target_squares<'a>(piece_type: PieceType, square: Square) -> &'a Vec<DirectionSquares> {
+    &PRERENDERED_MOVES[&piece_type][square.to_usize()]
 }
 
 fn generate_empty_board_moves(piece_type: PieceType) -> Vec<Vec<DirectionSquares>> {
     let mut result: Vec<Vec<DirectionSquares>> = Vec::with_capacity(64);
     for sq in 0u8..64 {
-        let target_squares = generate_empty_board_squares_moves(sq, piece_type);
+        let target_squares = generate_empty_board_squares_moves(Square::new(sq), piece_type);
         result.push(target_squares);
     }
     result
 }
 
-fn generate_empty_board_squares_moves(current_square: u8, piece_type: PieceType) -> Vec<DirectionSquares> {
+fn generate_empty_board_squares_moves(current_square: Square, piece_type: PieceType) -> Vec<DirectionSquares> {
     let piece_moves = get_piece_moves(piece_type);
 
     let mut result: Vec<DirectionSquares> = Vec::with_capacity(piece_moves.len());

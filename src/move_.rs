@@ -9,21 +9,12 @@ const MOVE_BIT_EP: u32            = 0b00000000_00000010_00000000_00000000;
 const MOVE_BIT_CASTLING: u32      = 0b00000000_00000100_00000000_00000000;
 const MOVE_MASK_PROMO_PIECE: u32  = 0b11111111_00000000_00000000_00000000;
 
-pub trait MoveFactory {
-    fn create(square_from: Self, square_to: Self) -> u32;
-}
-
-impl MoveFactory for u8 {
-    fn create(square_from: u8, square_to: u8) -> u32 {
-        ((square_from as u32) << 8) | (square_to as u32)
-    }
-}
-
 pub trait Move_ {
     fn new(value: Self) -> Self;
+    fn from_squares(square_from: Square, square_to: Square) -> Self;
     fn from_str(value: &str) -> Option<Self> where Self: marker::Sized;
     fn get_fen(self) -> String;
-    fn get_squares(self) -> (u8, u8);
+    fn get_squares(self) -> (Square, Square);
     fn is_promotion(self) -> bool;
     fn is_castling(self) -> bool;
     fn is_enpassant(self) -> bool;
@@ -37,6 +28,10 @@ pub trait Move_ {
 impl Move_ for u32 {
     fn new(value: u32) -> u32 {
         value
+    }
+
+    fn from_squares(square_from: Square, square_to: Square) -> u32 {
+        (square_from.to_u32() << 8) | square_to.to_u32()
     }
 
     fn from_str(value: &str) -> Option<u32> {
@@ -65,13 +60,13 @@ impl Move_ for u32 {
 
         let sq_from_str: String = value.chars().take(2).collect();
         match Square::from_str(&sq_from_str) {
-            Some::<u8>(s) => result |= (s as u32) << 8,
+            Some::<Square>(s) => result |= (s.to_u32()) << 8,
             None => return None
         }
 
         let sq_to_str: String = value.chars().skip(2).take(2).collect();
         match Square::from_str(&sq_to_str) {
-            Some::<u8>(s) => result |= s as u32,
+            Some::<Square>(s) => result |= s.to_u32(),
             None => return None
         }
 
@@ -79,11 +74,10 @@ impl Move_ for u32 {
     }
 
     fn get_fen(self) -> String {
-        let sq_from: u8 = ((self & MOVE_MASK_FROM) >> 8) as u8;
-        let sq_to: u8 = (self & MOVE_MASK_TO) as u8;
+        let (sq_from, sq_to) = self.get_squares();
 
-        let sq_from_str = Square::get_fen(sq_from);
-        let sq_to_str = Square::get_fen(sq_to);
+        let sq_from_str = sq_from.to_fen();
+        let sq_to_str = sq_to.to_fen();
 
         if self & MOVE_BIT_PROMO == 0 {
             //normal move
@@ -97,9 +91,9 @@ impl Move_ for u32 {
         format!("{}{}{}", sq_from_str, sq_to_str, promo_piece_char)
     }
 
-    fn get_squares(self) -> (u8, u8) {
-        let square_from = ((self & MOVE_MASK_FROM) >> 8) as u8;
-        let square_to = (self & MOVE_MASK_TO) as u8;
+    fn get_squares(self) -> (Square, Square) {
+        let square_from = Square::new(((self & MOVE_MASK_FROM) >> 8) as u8);
+        let square_to = Square::new((self & MOVE_MASK_TO) as u8);
 
         (square_from, square_to)
     }

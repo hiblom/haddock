@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use crate::global;
 use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
-
 use crate::position::Position;
 use crate::piecetype::PieceType;
 use crate::piecemove;
 use crate::outcome::Outcome;
 use crate::generator;
+use crate::square::Square;
 
 lazy_static! {
     static ref POINT_VALUE: HashMap<PieceType, i16> = {
@@ -41,7 +41,7 @@ pub fn is_check(position: &Position, color: u8) -> bool {
     }
 }
 
-pub fn is_square_attacked(position: &Position, current_square: u8, color: u8) -> bool {
+pub fn is_square_attacked(position: &Position, current_square: Square, color: u8) -> bool {
     let king_checked_moves = piecemove::get_king_checked_moves();
 
     for dirs_pieces in king_checked_moves {
@@ -112,7 +112,7 @@ pub fn evaluate(position: &Position) -> Outcome {
 
 fn get_material_value(position: &Position) -> i16 {
     let mut value: i16 = 0;
-    for piece in position.get_active_pieces() {
+    for piece in position.get_all_active_pieces() {
         value += POINT_VALUE[&piece.0];
     }
     value

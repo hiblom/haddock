@@ -152,9 +152,9 @@ impl Searcher {
 
     fn get_turn_duration(&self, total_time_left: u64) -> u64 {
         //TODO better time management
-        //assume game is 100 turns
-        if self.base_position.get_fullmovenumber() < 90 {
-            let turn_duration = total_time_left / (100 - self.base_position.get_fullmovenumber() as u64);
+        //assume game is 50 turns
+        if self.base_position.get_fullmovenumber() < 50 {
+            let turn_duration = total_time_left / (50 - self.base_position.get_fullmovenumber() as u64);
             println!("Haddock is thinking for {} ms", turn_duration);
             turn_duration
         }
@@ -192,12 +192,10 @@ impl Searcher {
                 //go back when we reached an end (mate, draw)
                 if s.end() {
                     //increase mate count
-                    if position.get_active_color() == global::COLOR_BLACK {
-                        match s {
-                            Outcome::WhiteIsMate(n) => s = Outcome::WhiteIsMate(n + 1),
-                            Outcome::BlackIsMate(n) => s = Outcome::BlackIsMate(n + 1),
-                            _ => ()
-                        }
+                    match s {
+                        Outcome::WhiteIsMate(n) => s = Outcome::WhiteIsMate(n + 1),
+                        Outcome::BlackIsMate(n) => s = Outcome::BlackIsMate(n + 1),
+                        _ => ()
                     }
                     return (false, Some(s), node.best_move, current_nodes,  Vec::new())
                 }
@@ -238,6 +236,7 @@ impl Searcher {
                     let mut new_pos = position.clone();
                     new_pos.apply_move(*legal_move);
                     let outcome = evaluation::evaluate(&new_pos);
+
                     sub_trees.insert(*legal_move, Tree { 
                         start_score: outcome, 
                         best_score: None, 

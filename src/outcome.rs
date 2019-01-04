@@ -31,8 +31,8 @@ impl Outcome {
 
         match self {
             Outcome::Undecided(material_value) => format!("cp {}", *material_value),
-            Outcome::WhiteIsMate(n) => format!("mate {}", mult * (*n as i16)),
-            Outcome::BlackIsMate(n) => format!("mate {}", - mult * (*n as i16)),
+            Outcome::WhiteIsMate(n) => format!("mate {}", mult * (*n as i16) / 2), //plies to moves
+            Outcome::BlackIsMate(n) => format!("mate {}", - mult * (*n as i16) / 2), //plies to moves
             _ => "cp 0".to_string()
         }
     }
