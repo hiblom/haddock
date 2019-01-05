@@ -22,6 +22,7 @@ mod searcher;
 mod outcome;
 mod evaluation;
 mod tree;
+mod bitboard;
 
 use std::io;
 use std::sync::mpsc::{Sender, Receiver};

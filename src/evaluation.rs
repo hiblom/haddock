@@ -30,14 +30,8 @@ lazy_static! {
 
 pub fn is_check(position: &Position, color: u8) -> bool {
     let other_color = 1 - color;
-    match position.get_king_square(color) {
-        Some(s) => {
-            return is_square_attacked(position, s, other_color);
-        },
-        _ => {
-            return false;
-        }
-    }
+    let s = position.get_king_square(color);
+    return is_square_attacked(position, s, other_color);
 }
 
 pub fn is_square_attacked(position: &Position, current_square: Square, color: u8) -> bool {

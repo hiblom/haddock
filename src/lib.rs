@@ -24,5 +24,6 @@ pub mod searcher;
 pub mod outcome;
 pub mod evaluation;
 pub mod tree;
+pub mod bitboard;
 
 mod tests;

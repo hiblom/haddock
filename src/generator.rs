@@ -12,7 +12,7 @@ use crate::evaluation;
 pub fn generate_moves(position: &Position) -> Vec<u32> {
     let mut result: Vec<u32> = Vec::new();
 
-    for (piece_type, square) in position.get_active_pieces() {
+    for (piece_type, square) in position.get_active_color_pieces() {
         let mut piece_moves = generate_piece_moves(position, square, piece_type);
         result.append(&mut piece_moves);
     }

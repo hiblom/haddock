@@ -202,6 +202,10 @@ impl Square {
         (x, y)
     }
 
+    pub fn to_u8(self) -> u8 {
+        self.0
+    }
+
     pub fn to_usize(self) -> usize {
         self.0 as usize
     }
