@@ -7,7 +7,6 @@ use crate::position::Position;
 use crate::piecetype::PieceType;
 use crate::piecemove;
 use crate::outcome::Outcome;
-use crate::generator;
 use crate::square::Square;
 
 lazy_static! {
@@ -79,13 +78,22 @@ pub fn is_square_attacked(position: &Position, current_square: Square, color: u8
 }
 
 pub fn evaluate(position: &Position) -> Outcome {
-    let check = is_check(position, position.get_active_color());
+    //check status of other king. when check, then the outcome is illegal
+    let color = position.get_active_color();
+    let other_color = 1 - color;
+
+    if is_check(position, other_color) {
+        return Outcome::Illegal
+    }
+
+    /*
+    let check = is_check(position, color);
     
     let no_legal_moves_left = generator::generate_legal_moves(position).len() == 0;
 
     let check_mate = check && no_legal_moves_left;
     if check_mate {
-        if position.get_active_color() == global::COLOR_WHITE {
+        if color == global::COLOR_WHITE {
             return Outcome::WhiteIsMate(0)
         }
         else {
@@ -97,6 +105,7 @@ pub fn evaluate(position: &Position) -> Outcome {
     if stale_mate {
         return Outcome::DrawByStalemate
     }
+    */
 
     let halfmoveclock = position.get_halfmoveclock() >= global::MAX_HALFMOVECLOCK;
     if halfmoveclock {

@@ -20,6 +20,20 @@ pub fn generate_moves(position: &Position) -> Vec<u32> {
     result
 }
 
+pub fn is_legal_move(position: &Position, move_: u32) -> bool {
+    let color = position.get_active_color();
+    //find all moves
+    let moves = generate_moves(position);
+    if moves.contains(&move_) {
+        let mut pos = position.clone();
+        pos.apply_move(move_);
+        return !evaluation::is_check(&pos, color);
+    }
+    false
+}
+
+
+/*
 pub fn generate_legal_moves(position: &Position) -> Vec<u32> {
     let color = position.get_active_color();
     //find all moves
@@ -36,6 +50,7 @@ pub fn generate_legal_moves(position: &Position) -> Vec<u32> {
     }
     legal_moves
 }
+*/
 
 pub fn generate_piece_moves(position: &Position, square: Square, piece_type: PieceType) -> Vec<u32> {
 
@@ -151,13 +166,20 @@ pub fn generate_pawn_moves(position: &Position, current_square: Square, color: u
 
     //double move
     if color == COLOR_WHITE && current_y == 1 || color == COLOR_BLACK && current_y == 6 {
-        let mut sq = pawn_advance(current_square, color).unwrap();
-        
-        if position.get_piece(sq).is_none() {
-            sq = pawn_advance(sq, color).unwrap();
-            if position.get_piece(sq).is_none() {
-                moves.push(Move_::from_squares(current_square, sq));
-            }
+        match pawn_advance(current_square, color) {
+            Some(sq) => {
+                if position.get_piece(sq).is_none() {
+                    match pawn_advance(sq, color) {
+                        Some(sq) => {
+                            if position.get_piece(sq).is_none() {
+                                moves.push(Move_::from_squares(current_square, sq));
+                            }
+                        },
+                        None => ()
+                    }
+                }
+            },
+            None => ()
         }
     }
 

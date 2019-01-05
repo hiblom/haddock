@@ -114,8 +114,7 @@ impl<'a> Game {
                             match Move_::from_str(args_parts[i]) {
                                 Some(mv) => {
                                     let mv = pos.analyze_move(mv);
-                                    let moves = generator::generate_legal_moves(pos);
-                                    if moves.contains(&mv) {
+                                    if generator::is_legal_move(pos, mv) {
                                         pos.apply_move(mv);
                                     }
                                     else {
@@ -134,8 +133,6 @@ impl<'a> Game {
                 }
             i += 1;
         }
-
-        //println!("{}", self.position.unwrap());
 
         true
     }

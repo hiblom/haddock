@@ -215,7 +215,12 @@ impl Position {
         let (square_from, square_to) = move_.get_squares();
 
         let piece_index_from = self.board[square_from.to_usize()];
-        let piece = self.get_piece(square_from).unwrap();
+
+        let piece;
+        match self.get_piece(square_from) {
+            Some(p) => piece = p,
+            None => panic!("No piece found at {}", square_from.to_fen())
+        }
 
         let mut capture = false;
         if self.board[square_to.to_usize()] != -1 {
@@ -361,7 +366,13 @@ impl Position {
         move_.set_castling(false);
 
         let (square_from, square_to) = move_.get_squares();
-        let piece = self.get_piece(square_from).unwrap();
+        let piece;
+        match self.get_piece(square_from) {
+            Some(p) => piece = p,
+            None => {
+                panic!("no piece found at {}", square_from.to_fen())
+            }
+        }
 
         //ep?
         if piece.is_pawn() {

@@ -673,6 +673,8 @@ fn test_king_castling_no_status() {
 
 }
 
+/*
+
 #[test]
 fn test_legal_moves() {
     //arrange
@@ -701,3 +703,5 @@ fn test_legal_moves() {
     }
 
 }
+
+*/

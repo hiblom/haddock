@@ -4,6 +4,7 @@ use crate::global;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Outcome {
+    Illegal,
     Undecided(i16),
     WhiteIsMate(u16),
     BlackIsMate(u16),

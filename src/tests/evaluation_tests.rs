@@ -119,7 +119,7 @@ fn test_is_check_by_pawn() {
 }
 
 
-
+/*
 #[test]
 fn test_fools_mate() {
     //arrange
@@ -130,6 +130,26 @@ fn test_fools_mate() {
 
     position.apply_move(mv("g2g4"));
     position.apply_move(mv("d8h4"));
+
+    //act
+    let score = crate::evaluation::evaluate(&position);
+
+    //assert
+    assert_eq!(
+        crate::outcome::Outcome::WhiteIsMate(0),
+        score,
+        "Check mate not as expected\n{}",
+        position
+    );
+}
+*/
+
+#[test]
+fn test_some_pos() {
+    //arrange
+    let mut position = crate::parser::parse_startpos().unwrap();
+    
+
 
     //act
     let score = crate::evaluation::evaluate(&position);

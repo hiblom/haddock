@@ -92,8 +92,13 @@ impl Searcher {
             }
 
             best_move = current_node.best_move;
-            //println!("best move so far {}", Move_::get_fen(best_move.unwrap()));
-            let score = current_node.best_score.unwrap().to_uci_score(current_pos.get_active_color());
+            let best_score;
+            match current_node.best_score {
+                Some(s) => best_score = s,
+                None => panic!("No best score found in node")
+            }   
+            
+            let score = best_score.to_uci_score(current_pos.get_active_color());
             let time = self.get_time_elapsed_ms();
             
             let mut nps = 0;
@@ -105,12 +110,20 @@ impl Searcher {
 
             println!("info depth {} score {} time {} nodes {} nps {} pv {}", depth, score, time, total_nodes, nps, pv_string);
 
-            if current_node.best_score.unwrap().end() {
-                break;
+            match current_node.best_score {
+                Some (s) => if s.end() {
+                    break;
+                },
+                None => panic!("No best score found in node!")
             }
         }
 
-        return best_move.unwrap(); //some move HAS to be found...
+        match best_move {
+            Some(m) => {
+                return m;
+            },
+            None => panic!("Best move not found!")
+        }
     }
 
     fn set_times(&mut self) {
@@ -230,14 +243,21 @@ impl Searcher {
             },
             None => {
                 let mut sub_trees: HashMap<u32, Tree> = HashMap::new();
-                let legal_moves = generator::generate_legal_moves(position);
+                let moves = generator::generate_moves(position);
                 
-                for legal_move in &legal_moves {
+                for move_ in &moves {
                     let mut new_pos = position.clone();
-                    new_pos.apply_move(*legal_move);
+                    new_pos.apply_move(*move_);
                     let outcome = evaluation::evaluate(&new_pos);
 
-                    sub_trees.insert(*legal_move, Tree { 
+                    match outcome {
+                        Outcome::Illegal => {
+                            continue;
+                        },
+                        _ => ()
+                    }
+
+                    sub_trees.insert(*move_, Tree { 
                         start_score: outcome, 
                         best_score: None, 
                         best_move: None, 
@@ -245,10 +265,26 @@ impl Searcher {
 
                     if Searcher::is_better_outcome(&Some(outcome), &node.best_score, position.get_active_color()) {
                         node.best_score = Some(outcome);
-                        node.best_move = Some(*legal_move);
+                        node.best_move = Some(*move_);
                     }
                 }
-                current_nodes += legal_moves.len() as u32;
+
+                if sub_trees.len() == 0 {
+                    //check mate or stale mate
+                    if evaluation::is_check(position, position.get_active_color()) {
+                        if position.get_active_color() == global::COLOR_WHITE {
+                            node.best_score = Some(Outcome::WhiteIsMate(0));
+                        }
+                        else {
+                            node.best_score = Some(Outcome::BlackIsMate(0));
+                        }
+                    }
+                    else {
+                        node.best_score = Some(Outcome::DrawByStalemate);
+                    }
+                }
+
+                current_nodes += moves.len() as u32;
                 node.sub_trees = Some(sub_trees);
                 match node.best_move {
                     Some(m) => pv.push(m),
