@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::searchtype::SearchType;
 use crate::searchcommand::SearchCommand;
 use crate::position::Position;
-use crate::generator;
+use crate::generator::Generator;
 use crate::move_::Move_;
 use crate::tree::Tree;
 use crate::evaluation;
@@ -243,7 +243,7 @@ impl Searcher {
             },
             None => {
                 let mut sub_trees: HashMap<u32, Tree> = HashMap::new();
-                let moves = generator::generate_moves(position);
+                let moves = Generator::new(position).generate_moves();
                 
                 for move_ in &moves {
                     let mut new_pos = position.clone();

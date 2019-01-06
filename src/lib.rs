@@ -25,5 +25,6 @@ pub mod outcome;
 pub mod evaluation;
 pub mod tree;
 pub mod bitboard;
+pub mod moveboard;
 
 mod tests;

@@ -78,6 +78,16 @@ impl Position {
         result
     }
 
+    pub fn get_piece_board(&self, color: u8) -> BitBoard {
+        return 
+            self.bit_boards[PieceType::new_pawn(color).to_usize()] |
+            self.bit_boards[PieceType::new_king(color).to_usize()] |
+            self.bit_boards[PieceType::new_queen(color).to_usize()] |
+            self.bit_boards[PieceType::new_rook(color).to_usize()] |
+            self.bit_boards[PieceType::new_bishop(color).to_usize()] |
+            self.bit_boards[PieceType::new_knight(color).to_usize()];
+    }
+
     pub fn set_active_color(&mut self, color: u8) {
         self.active_color = color;
     }
