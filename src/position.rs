@@ -88,6 +88,10 @@ impl Position {
             self.bit_boards[PieceType::new_knight(color).to_usize()];
     }
 
+    pub fn get_bit_board(&self, piece: PieceType) -> BitBoard {
+        return self.bit_boards[piece.to_usize()];
+    }
+
     pub fn set_active_color(&mut self, color: u8) {
         self.active_color = color;
     }

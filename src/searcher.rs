@@ -271,7 +271,7 @@ impl Searcher {
 
                 if sub_trees.len() == 0 {
                     //check mate or stale mate
-                    if evaluation::is_check(position, position.get_active_color()) {
+                    if Generator::new(position).is_check(position.get_active_color()) {
                         if position.get_active_color() == global::COLOR_WHITE {
                             node.best_score = Some(Outcome::WhiteIsMate(depth));
                         }

@@ -98,6 +98,7 @@ impl PieceType {
         self.0 & MASK_TYPE
     }
 
+    #[allow(dead_code)]
     pub fn get_move_type(self) -> PieceType {
         let raw_type = self.0 & MASK_TYPE;
         
@@ -108,6 +109,7 @@ impl PieceType {
         PieceType(self.0 & MASK_TYPE)
     }
 
+    #[allow(dead_code)]
     pub fn has_color(self, color: u8) -> bool {
         color == self.0 & MASK_COLOR
     }

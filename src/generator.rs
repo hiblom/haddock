@@ -6,8 +6,6 @@ use crate::piecetype::PieceType;
 use crate::move_::Move_;
 use crate::square;
 use crate::square::Square;
-//use crate::piecemove;
-use crate::evaluation;
 use crate::moveboard;
 use crate::bitboard::BitBoard;
 
@@ -45,33 +43,32 @@ impl<'a> Generator<'a> {
 
             let mut pos = self.position.clone();
             pos.apply_move(move_);
-            return !evaluation::is_check(&pos, color);
+            return !Generator::new(&pos).is_check(color);
         }
         false
     }
 
     pub fn is_castling_legal(&self, move_: u32) -> bool {
         let color = self.position.get_active_color();
-        let other_color = 1 - color;
 
         //cannot castle out of check
-        if evaluation::is_check(self.position, color) {
+        if self.is_check(color) {
             return false;
         }
 
         //check square that is crossed by king
         let (_, square_to) = move_.get_squares();
         if square_to == square::G1 {
-            return !evaluation::is_square_attacked(self.position, square::F1, other_color);
+            return !self.is_square_attacked(square::F1, color);
         }
         else if square_to == square::C1 {
-            return !evaluation::is_square_attacked(self.position, square::D1, other_color);
+            return !self.is_square_attacked(square::D1, color);
         }
         else if square_to == square::G8 {
-            return !evaluation::is_square_attacked(self.position, square::F8, other_color);
+            return !self.is_square_attacked(square::F8, color);
         }
         else if square_to == square::C8 {
-            return !evaluation::is_square_attacked(self.position, square::D1, other_color);
+            return !self.is_square_attacked(square::D8, color);
         }
         false //should never happen
     }
@@ -101,50 +98,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    /*
-    pub fn generate_normal_piece_moves(&self, current_square: Square, color: u8) -> Vec<u32> {
-        let mut result: Vec<u32> = Vec::new();
-
-        let piece;
-        match self.position.get_piece(current_square) {
-            Some(p) => piece = p,
-            None => return result
-        }
-
-        let move_type = piece.get_move_type();
-
-        let dir_target_squares = piecemove::get_prerendered_target_squares(move_type, current_square);
-
-        for dir_sq in dir_target_squares {
-            for sq in &dir_sq.squares {
-
-                match self.position.get_piece(*sq) {
-                    None => {
-                        if dir_sq.silent {
-                            result.push(Move_::from_squares(current_square, *sq));
-                        }
-                    },
-                    Some(other_piece) => {
-                        if other_piece.has_color(color) {
-                            //block by piece of same color
-                            break;
-                        }
-                        else {
-                            if dir_sq.capture {
-                                result.push(Move_::from_squares(current_square, *sq));
-                            }
-                            break
-                        }
-                    }
-                }
-            }
-        }
-
-        result
-    }
-    */
-
-    fn generate_moveboard_moves(&self, current_square: Square, mb: usize) -> Vec<u32> {
+     fn generate_moveboard_moves(&self, current_square: Square, mb: usize) -> Vec<u32> {
         let mut result: Vec<u32> = Vec::new();
 
         let mut move_board = moveboard::get_move_board(mb, current_square);
@@ -285,13 +239,13 @@ impl<'a> Generator<'a> {
         let pushed = move_board.not_empty();
 
         let cap_board = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], current_square);
-        move_board |= cap_board & self.opp_piece_board; //only include captures of pieces of opp color
+        move_board |= cap_board & self.opp_piece_board; //only include captures
         
         for sq in move_board.get_squares() {
             moves.push(Move_::from_squares(current_square, sq));
         }
         
-        let (current_x, current_y) = current_square.to_xy();
+        let (_, current_y) = current_square.to_xy();
 
         //double move
         if pushed {
@@ -315,31 +269,14 @@ impl<'a> Generator<'a> {
         match self.position.get_enpassant_square() {
             None => (),
             Some(ep_sq) => {
-                let (ep_x, ep_y) = ep_sq.to_xy();
-                let y_to = match color {
-                    COLOR_WHITE => current_y + 1,
-                    _ => current_y - 1
-                };
-                if y_to == ep_y {
-                    if current_x > 0 {
-                        let x_to = current_x - 1;
-                        if x_to == ep_x {
-                            let mut mv:u32 = Move_::from_squares(current_square, ep_sq);
-                            mv.set_enpassant(true);
-                            moves.push(mv);
-                        }
-                    }
-                    if current_x < 7 {
-                        let x_to = current_x + 1;
-                        if x_to == ep_x {
-                            let mut mv:u32 = Move_::from_squares(current_square, ep_sq);
-                            mv.set_enpassant(true);
-                            moves.push(mv);
-                        }
-                    }
+                let ep_bb = BitBoard::from_square(ep_sq);
+                if (ep_bb & cap_board).not_empty() {
+                    let mut mv:u32 = Move_::from_squares(current_square, ep_sq);
+                    mv.set_enpassant(true);
+                    moves.push(mv);
                 }
             }
-        };
+        }
 
         //promotion
         let mut result: Vec<u32> = Vec::new();
@@ -358,5 +295,74 @@ impl<'a> Generator<'a> {
             }
         }
         result
+    }
+
+    pub fn is_check(&self, color: u8) -> bool {
+        let s = self.position.get_king_square(color);
+        return self.is_square_attacked(s, color);
+    }
+
+    pub fn is_square_attacked(&self, square: Square, color: u8) -> bool {
+        let other_color = 1 - color;
+
+        //attacked by king?
+        let mb = moveboard::get_move_board(moveboard::MOVEBOARD_KING, square);
+        let bb = self.position.get_bit_board(PieceType::new_king(other_color));
+        if (mb & bb).not_empty() {
+            return true;
+        }
+
+        //attacked by knight
+        let mb = moveboard::get_move_board(moveboard::MOVEBOARD_KNIGHT, square);
+        let bb = self.position.get_bit_board(PieceType::new_knight(other_color));
+        if (mb & bb).not_empty() {
+            return true;
+        }
+
+        //attacked by pawn. use own color pawn capture board to intersect with opp pawns
+        let mb = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], square);
+        let bb = self.position.get_bit_board(PieceType::new_pawn(other_color));
+        if (mb & bb).not_empty() {
+            return true;
+        }
+
+        //sliding piece attacks
+        return
+            self.find_orthogonal_attacker(moveboard::DIR_UP, square, BitBoard::get_lowest_square, other_color) ||
+            self.find_orthogonal_attacker(moveboard::DIR_RIGHT, square, BitBoard::get_lowest_square, other_color) ||
+            self.find_orthogonal_attacker(moveboard::DIR_DOWN, square, BitBoard::get_highest_square, other_color) ||
+            self.find_orthogonal_attacker(moveboard::DIR_LEFT, square, BitBoard::get_highest_square, other_color) ||
+            self.find_diagonal_attacker(moveboard::DIR_UP_RIGHT, square, BitBoard::get_lowest_square, other_color) ||
+            self.find_diagonal_attacker(moveboard::DIR_DOWN_RIGHT, square, BitBoard::get_highest_square, other_color) ||
+            self.find_diagonal_attacker(moveboard::DIR_DOWN_LEFT, square, BitBoard::get_highest_square, other_color) ||
+            self.find_diagonal_attacker(moveboard::DIR_UP_LEFT, square, BitBoard::get_lowest_square, other_color);
+    }
+
+    fn find_orthogonal_attacker(&self, direction: usize, square: Square, get_nearest: fn(BitBoard) -> Square, other_color: u8) -> bool {
+        let forward_ray_board = moveboard::get_ray_board(direction, square);
+        let inter = forward_ray_board & self.all_piece_board;
+        if inter.not_empty() {
+            let nearest_square = get_nearest(inter);
+            let bb = 
+                self.position.get_bit_board(PieceType::new_queen(other_color)) | 
+                self.position.get_bit_board(PieceType::new_rook(other_color));
+            
+            return (BitBoard::from_square(nearest_square) & bb).not_empty();
+        }
+        false
+    }
+
+    fn find_diagonal_attacker(&self, direction: usize, square: Square, get_nearest: fn(BitBoard) -> Square, other_color: u8) -> bool {
+        let forward_ray_board = moveboard::get_ray_board(direction, square);
+        let inter = forward_ray_board & self.all_piece_board;
+        if inter.not_empty() {
+            let nearest_square = get_nearest(inter);
+            let bb = 
+                self.position.get_bit_board(PieceType::new_queen(other_color)) | 
+                self.position.get_bit_board(PieceType::new_bishop(other_color));
+            
+            return (BitBoard::from_square(nearest_square) & bb).not_empty();
+        }
+        false
     }
 }

@@ -15,7 +15,6 @@ mod piecetype;
 mod game;
 mod position;
 mod parser;
-mod piecemove;
 mod generator;
 mod searchcommand;
 mod searcher;

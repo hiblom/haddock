@@ -17,7 +17,6 @@ pub mod piecetype;
 pub mod game;
 pub mod position;
 pub mod parser;
-pub mod piecemove;
 pub mod generator;
 pub mod searchcommand;
 pub mod searcher;

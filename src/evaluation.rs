@@ -5,9 +5,8 @@ use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
 use crate::position::Position;
 use crate::piecetype::PieceType;
-use crate::piecemove;
 use crate::outcome::Outcome;
-use crate::square::Square;
+use crate::generator::Generator;
 
 lazy_static! {
     static ref POINT_VALUE: HashMap<PieceType, i32> = {
@@ -28,55 +27,12 @@ lazy_static! {
     };
 }
 
-pub fn is_check(position: &Position, color: u8) -> bool {
-    let other_color = 1 - color;
-    let s = position.get_king_square(color);
-    return is_square_attacked(position, s, other_color);
-}
-
-pub fn is_square_attacked(position: &Position, current_square: Square, color: u8) -> bool {
-    let king_checked_moves = piecemove::get_king_checked_moves();
-
-    for dirs_pieces in king_checked_moves {
-        for dir in &dirs_pieces.0 {
-            let mut square = current_square;
-            for _ in 0..dir.max_steps {
-                match (dir.mov)(square) {
-                    Some(s) => {
-                        match position.get_piece(s) {
-                            None => square = s,
-                            Some(other_piece) => {
-                                if other_piece.has_color(color) {
-                                    //enemy piece
-                                    let move_type = other_piece.get_move_type();
-                                    if dirs_pieces.1.contains(&move_type) {
-                                        return true;
-                                    }
-                                    break;
-                                }
-                                else {
-                                    //friendly piece
-                                    break;
-                                }
-                            }
-                        }
-                    },
-                    None => break
-                }
-
-            }
-        }
-    }
-
-    false
-}
-
 pub fn evaluate(position: &Position, depth: i32) -> Outcome {
     //check status of other king. when check, then the outcome is illegal
     let color = position.get_active_color();
     let other_color = 1 - color;
 
-    if is_check(position, other_color) {
+    if Generator::new(position).is_check(other_color) {
         return Outcome::Illegal(depth)
     }
 
