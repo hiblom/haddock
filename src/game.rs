@@ -119,6 +119,7 @@ impl<'a> Game {
                                     }
                                     else {
                                         println!("{} is an illegal move!", &args_parts[i]);
+                                        println!("internal position:\n{}", pos);
                                         return true;  
                                     }
                                 }, 

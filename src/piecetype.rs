@@ -84,9 +84,11 @@ impl PieceType {
         c
     }
 
+    /*
     pub fn get_color(self) -> u8 {
         self.0 & MASK_COLOR
     }
+    */
 
     pub fn set_color(&mut self, color: u8) {
         self.0 = (self.0 & MASK_TYPE) | color;

@@ -333,19 +333,20 @@ impl Position {
 
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut res = "-----------------\n".to_string();
+        let mut res = "".to_string();
         for y in (0u8..8).rev() {
+            res.push_str(&format!("{} ", y + 1));
             for x in 0u8..8 {
                 let piece = self.get_piece(Square::from_xy(x, y));
                 let c = match piece {
                     Some(p) => p.to_char(),
-                    None => ' '
+                    None => '.'
                 };
-                res.push_str(&format!("|{}", c));
+                res.push(c);
             }
-            res.push_str("|\n");
-            res.push_str("-----------------\n");
+            res.push_str("\n");
         }
+        res.push_str("  abcdefgh\n");
         write!(f, "{}", res)
     }
 }

@@ -1,5 +1,5 @@
 use crate::bitboard::BitBoard;
-use crate::piecetype::PieceType;
+//use crate::piecetype::PieceType;
 use crate::square::Square;
 
 pub const DIR_UP: usize = 0;
@@ -11,16 +11,25 @@ pub const DIR_DOWN_LEFT: usize = 5;
 pub const DIR_LEFT: usize = 6;
 pub const DIR_UP_LEFT: usize = 7;
 
+pub const MOVEBOARD_KING: usize = 0;
+pub const MOVEBOARD_KNIGHT: usize = 1;
+pub const MOVEBOARD_WHITE_PAWN_PUSH: usize = 2;
+pub const MOVEBOARD_BLACK_PAWN_PUSH: usize = 3;
+pub const MOVEBOARD_WHITE_PAWN_CAP: usize = 4;
+pub const MOVEBOARD_BLACK_PAWN_CAP: usize = 5;
+
 
 lazy_static! {
-    static ref PIECE_MOVE_BOARDS: [[BitBoard; 64]; 4] = {
+    static ref PIECE_MOVE_BOARDS: [[BitBoard; 64]; 6] = {
         println!("Haddock is generating piece move boards");
 
-        let mut result = [[BitBoard::new(); 64]; 4];
-        result[0] = create_king_moveboards();
-        result[1] = create_king_moveboards();
-        result[2] = create_knight_moveboards();
-        result[3] = create_knight_moveboards();
+        let mut result = [[BitBoard::new(); 64]; 6];
+        result[MOVEBOARD_KING] = create_king_moveboards();
+        result[MOVEBOARD_KNIGHT] = create_knight_moveboards();
+        result[MOVEBOARD_WHITE_PAWN_PUSH] = create_white_pawn_moveboards();
+        result[MOVEBOARD_BLACK_PAWN_PUSH] = create_black_pawn_moveboards();
+        result[MOVEBOARD_WHITE_PAWN_CAP] = create_white_pawn_captureboards();
+        result[MOVEBOARD_BLACK_PAWN_CAP] = create_black_pawn_captureboards();
         result
     };
 
@@ -41,11 +50,8 @@ lazy_static! {
 
 }
 
-//translate piece values to MoveBoard index, 255 signifies no moveboard for piece
-const PIECE_BOARD_INDEX: [usize; 12] = [255,255,0,1,255,255,255,255,255,255,2,3];
-
-pub fn get_move_board(piece: PieceType, square: Square) -> BitBoard {
-    PIECE_MOVE_BOARDS[PIECE_BOARD_INDEX[piece.to_usize()]][square.to_usize()]
+pub fn get_move_board(mb: usize, square: Square) -> BitBoard {
+    PIECE_MOVE_BOARDS[mb][square.to_usize()]
 }
 
 pub fn get_ray_board(dir: usize, square: Square) -> BitBoard {
@@ -81,6 +87,60 @@ fn create_knight_moveboards() -> [BitBoard; 64] {
         b_hor = b_hor.clone().left().left() | b_hor.clone().right().right();
 
         result[i as usize] = b_vert | b_hor;
+    }
+    result
+}
+
+fn create_white_pawn_moveboards() -> [BitBoard; 64] {
+    let mut result = [BitBoard::new(); 64];
+    for i in 0u8..64 {
+        let sq = Square::new(i);
+        let mut bb = result[i as usize];
+        bb.set(sq);
+        bb.up();
+
+        result[i as usize] = bb;
+    }
+    result
+}
+
+fn create_black_pawn_moveboards() -> [BitBoard; 64] {
+    let mut result = [BitBoard::new(); 64];
+    for i in 0u8..64 {
+        let sq = Square::new(i);
+        let mut bb = result[i as usize];
+        bb.set(sq);
+        bb.down();
+
+        result[i as usize] = bb;
+    }
+    result
+}
+
+fn create_white_pawn_captureboards() -> [BitBoard; 64] {
+    let mut result = [BitBoard::new(); 64];
+    for i in 0u8..64 {
+        let sq = Square::new(i);
+        let mut bb = result[i as usize];
+        bb.set(sq);
+        let bl = bb.clone().up().left();
+        let br = bb.clone().up().right();
+
+        result[i as usize] = bl | br;
+    }
+    result
+}
+
+fn create_black_pawn_captureboards() -> [BitBoard; 64] {
+    let mut result = [BitBoard::new(); 64];
+    for i in 0u8..64 {
+        let sq = Square::new(i);
+        let mut bb = result[i as usize];
+        bb.set(sq);
+        let bl = bb.clone().down().left();
+        let br = bb.clone().down().right();
+
+        result[i as usize] = bl | br;
     }
     result
 }

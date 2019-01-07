@@ -173,9 +173,11 @@ pub fn get_king_checked_moves<'a>() -> &'a Vec<(Vec<Dir>, Vec<PieceType>)> {
     &KING_CHECKED
 }
 
+/*
 pub fn get_prerendered_target_squares<'a>(piece_type: PieceType, square: Square) -> &'a Vec<DirectionSquares> {
     &PRERENDERED_MOVES[&piece_type][square.to_usize()]
 }
+*/
 
 fn generate_empty_board_moves(piece_type: PieceType) -> Vec<Vec<DirectionSquares>> {
     let mut result: Vec<Vec<DirectionSquares>> = Vec::with_capacity(64);

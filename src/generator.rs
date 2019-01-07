@@ -6,10 +6,13 @@ use crate::piecetype::PieceType;
 use crate::move_::Move_;
 use crate::square;
 use crate::square::Square;
-use crate::piecemove;
+//use crate::piecemove;
 use crate::evaluation;
 use crate::moveboard;
 use crate::bitboard::BitBoard;
+
+const PAWN_PUSH_MOVEBOARD: [usize; 2] = [moveboard::MOVEBOARD_WHITE_PAWN_PUSH, moveboard::MOVEBOARD_BLACK_PAWN_PUSH];
+const PAWN_CAP_MOVEBOARD: [usize; 2] = [moveboard::MOVEBOARD_WHITE_PAWN_CAP, moveboard::MOVEBOARD_BLACK_PAWN_CAP];
 
 pub struct Generator<'a> {
     position: &'a Position,
@@ -61,12 +64,13 @@ impl<'a> Generator<'a> {
             piecetype::PIECE_QUEEN => self.generate_queen_moves(square),
             piecetype::PIECE_ROOK => self.generate_rook_moves(square),
             piecetype::PIECE_BISHOP => self.generate_bishop_moves(square),
-            piecetype::PIECE_KNIGHT => self.generate_moveboard_moves(square),
+            piecetype::PIECE_KNIGHT => self.generate_moveboard_moves(square, moveboard::MOVEBOARD_KNIGHT),
             piecetype::PIECE_PAWN => self.generate_pawn_moves(square),
             _ => Vec::new()
         }
     }
 
+    /*
     pub fn generate_normal_piece_moves(&self, current_square: Square, color: u8) -> Vec<u32> {
         let mut result: Vec<u32> = Vec::new();
 
@@ -107,16 +111,12 @@ impl<'a> Generator<'a> {
 
         result
     }
+    */
 
-    fn generate_moveboard_moves(&self, current_square: Square) -> Vec<u32> {
+    fn generate_moveboard_moves(&self, current_square: Square, mb: usize) -> Vec<u32> {
         let mut result: Vec<u32> = Vec::new();
-        let piece;
-        match self.position.get_piece(current_square) {
-            Some(p) => piece = p,
-            None => return result
-        }
 
-        let mut move_board = moveboard::get_move_board(piece, current_square);
+        let mut move_board = moveboard::get_move_board(mb, current_square);
         move_board &= !self.own_piece_board; //exclude moves to pieces of same color
 
         for sq in move_board.get_squares() {
@@ -195,10 +195,10 @@ impl<'a> Generator<'a> {
     }
 
     pub fn generate_king_moves(&self, current_square: Square) -> Vec<u32> {
-        let mut result = self.generate_moveboard_moves(current_square);
+        let mut result = self.generate_moveboard_moves(current_square, moveboard::MOVEBOARD_KING);
 
         let color = self.position.get_active_color();
-        //TODO king squares cannot be attacked by other color
+        //TODO king squares cannot be attacked by other color while castling (possibly in eval)
         //castling
         if color == COLOR_WHITE {
             if self.position.get_castling_status(0) {
@@ -248,26 +248,36 @@ impl<'a> Generator<'a> {
 
     pub fn generate_pawn_moves(&self, current_square: Square) -> Vec<u32> {
         let color = self.position.get_active_color();
-        let mut moves = self.generate_normal_piece_moves(current_square, color);
+        let mut moves: Vec<u32> = Vec::new();
 
+        let mut move_board = moveboard::get_move_board(PAWN_PUSH_MOVEBOARD[color as usize], current_square);
+        move_board &= !self.all_piece_board; //exclude moves to occupied squares
+        let pushed = move_board.not_empty();
+
+        let cap_board = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], current_square);
+        move_board |= cap_board & self.opp_piece_board; //only include captures of pieces of opp color
+        
+        for sq in move_board.get_squares() {
+            moves.push(Move_::from_squares(current_square, sq));
+        }
+        
         let (current_x, current_y) = current_square.to_xy();
 
         //double move
-        if color == COLOR_WHITE && current_y == 1 || color == COLOR_BLACK && current_y == 6 {
-            match pawn_advance(current_square, color) {
-                Some(sq) => {
-                    if self.position.get_piece(sq).is_none() {
-                        match pawn_advance(sq, color) {
-                            Some(sq) => {
-                                if self.position.get_piece(sq).is_none() {
-                                    moves.push(Move_::from_squares(current_square, sq));
-                                }
-                            },
-                            None => ()
-                        }
-                    }
-                },
-                None => ()
+        if pushed {
+            if color == COLOR_WHITE && current_y == 1 {
+                let mut sq_to = current_square.up().unwrap();
+                sq_to = sq_to.up().unwrap();
+                if self.position.get_piece(sq_to).is_none() {
+                    moves.push(Move_::from_squares(current_square, sq_to));
+                }
+            }
+            else if color == COLOR_BLACK && current_y == 6 {
+                let mut sq_to = current_square.down().unwrap();
+                sq_to = sq_to.down().unwrap();
+                if self.position.get_piece(sq_to).is_none() {
+                    moves.push(Move_::from_squares(current_square, sq_to));
+                }
             }
         }
 
@@ -308,10 +318,10 @@ impl<'a> Generator<'a> {
             let (_, sq_to) = Move_::get_squares(m);
             let (_, y_to) = sq_to.to_xy();
             if (color == COLOR_WHITE && y_to == 7) || (color == COLOR_BLACK && y_to == 0) {
-                result.push(Move_::create_promo_copy(m, PieceType::new_queen(color)));
-                result.push(Move_::create_promo_copy(m, PieceType::new_rook(color)));
-                result.push(Move_::create_promo_copy(m, PieceType::new_bishop(color)));
-                result.push(Move_::create_promo_copy(m, PieceType::new_knight(color)));
+                result.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
+                result.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
+                result.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
+                result.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
             }
             else {
                 result.push(m);
@@ -320,12 +330,3 @@ impl<'a> Generator<'a> {
         result
     }
 }
-
-fn pawn_advance(square: Square, color: u8) -> Option<Square> {
-    match color {
-        COLOR_WHITE => square.up(),
-        _ => square.down()
-    }
-}
-
-
