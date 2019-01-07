@@ -75,7 +75,7 @@ impl Searcher {
 
         self.set_times();
 
-        let outcome = evaluation::evaluate(&current_pos);
+        let outcome = evaluation::evaluate(&current_pos, 0);
         let mut tree = Tree { 
             start_score: outcome,
             best_score: None, 
@@ -86,7 +86,7 @@ impl Searcher {
 
         let mut best_move:Option<u32> = None;
         for depth in 1 .. (max_depth + 1) {
-            let (stopped, _, _, total_nodes, pv) = self.traverse_tree(current_node, current_pos);
+            let (stopped, _, _, total_nodes, pv) = self.traverse_tree(current_node, current_pos, 1);
             if stopped {
                 break;
             }
@@ -193,7 +193,7 @@ impl Searcher {
         }
     }
 
-    fn traverse_tree(&self, node: &mut Tree, position: &Position) -> (bool, Option<Outcome>, Option<u32>, u32, Vec<u32>) {
+    fn traverse_tree(&self, node: &mut Tree, position: &Position, depth: i32) -> (bool, Option<Outcome>, Option<u32>, u32, Vec<u32>) {
         if self.must_stop() {
             return (true, None, None, 0, Vec::new());
         }
@@ -220,7 +220,7 @@ impl Searcher {
                     for (move_, sub_tree) in sub_trees.iter_mut() {
                         let mut pos = position.clone();
                         pos.apply_move(*move_);
-                        let (stop, sub_best_score, _, sub_nodes, sub_pv) = self.traverse_tree(sub_tree, &pos);
+                        let (stop, sub_best_score, _, sub_nodes, sub_pv) = self.traverse_tree(sub_tree, &pos, depth + 1);
                         if stop {
                             return (true, None, None, 0, Vec::new());
                         }
@@ -248,10 +248,10 @@ impl Searcher {
                 for move_ in &moves {
                     let mut new_pos = position.clone();
                     new_pos.apply_move(*move_);
-                    let outcome = evaluation::evaluate(&new_pos);
+                    let outcome = evaluation::evaluate(&new_pos, depth);
 
                     match outcome {
-                        Outcome::Illegal => {
+                        Outcome::Illegal(_) => {
                             continue;
                         },
                         _ => ()
@@ -273,14 +273,14 @@ impl Searcher {
                     //check mate or stale mate
                     if evaluation::is_check(position, position.get_active_color()) {
                         if position.get_active_color() == global::COLOR_WHITE {
-                            node.best_score = Some(Outcome::WhiteIsMate(0));
+                            node.best_score = Some(Outcome::WhiteIsMate(depth));
                         }
                         else {
-                            node.best_score = Some(Outcome::BlackIsMate(0));
+                            node.best_score = Some(Outcome::BlackIsMate(depth));
                         }
                     }
                     else {
-                        node.best_score = Some(Outcome::DrawByStalemate);
+                        node.best_score = Some(Outcome::DrawByStalemate(depth));
                     }
                 }
 

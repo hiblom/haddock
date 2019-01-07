@@ -10,7 +10,7 @@ use crate::outcome::Outcome;
 use crate::square::Square;
 
 lazy_static! {
-    static ref POINT_VALUE: HashMap<PieceType, i16> = {
+    static ref POINT_VALUE: HashMap<PieceType, i32> = {
         let mut m = HashMap::new();
         m.insert(PieceType::new_pawn(COLOR_WHITE), 100);
         m.insert(PieceType::new_pawn(COLOR_BLACK), -100);
@@ -71,13 +71,13 @@ pub fn is_square_attacked(position: &Position, current_square: Square, color: u8
     false
 }
 
-pub fn evaluate(position: &Position) -> Outcome {
+pub fn evaluate(position: &Position, depth: i32) -> Outcome {
     //check status of other king. when check, then the outcome is illegal
     let color = position.get_active_color();
     let other_color = 1 - color;
 
     if is_check(position, other_color) {
-        return Outcome::Illegal
+        return Outcome::Illegal(depth)
     }
 
     /*
@@ -103,18 +103,18 @@ pub fn evaluate(position: &Position) -> Outcome {
 
     let halfmoveclock = position.get_halfmoveclock() >= global::MAX_HALFMOVECLOCK;
     if halfmoveclock {
-        return Outcome::DrawByHalfmoveclock
+        return Outcome::DrawByHalfmoveclock(depth)
     }
 
     //TODO repetition
     //TODO not enough material
 
     let material_value = get_material_value(position);
-    Outcome::Undecided(material_value)
+    Outcome::Undecided(depth, material_value)
 }
 
-fn get_material_value(position: &Position) -> i16 {
-    let mut value: i16 = 0;
+fn get_material_value(position: &Position) -> i32 {
+    let mut value: i32 = 0;
     for piece in position.get_all_active_pieces() {
         value += POINT_VALUE[&piece.0];
     }
