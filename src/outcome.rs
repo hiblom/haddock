@@ -26,14 +26,14 @@ impl Outcome {
 
     pub fn to_uci_score(&self, active_color: u8) -> String {
         let mult = match active_color {
-            global::COLOR_WHITE => -1,
-            _ => 1
+            global::COLOR_WHITE => 1,
+            _ => - 1
         };
 
         match self {
             Outcome::Undecided(_, material_value) => format!("cp {}", mult * *material_value),
-            Outcome::WhiteIsMate(depth) => format!("mate {}", mult * (*depth + 1) / 2), //plies to moves
-            Outcome::BlackIsMate(depth) => format!("mate {}", - mult * (*depth + 1) / 2), //plies to moves
+            Outcome::BlackIsMate(depth) => format!("mate {}", mult * (*depth + 1) / 2), //plies to moves
+            Outcome::WhiteIsMate(depth) => format!("mate {}", - mult * (*depth + 1) / 2), //plies to moves
             _ => "cp 0".to_string()
         }
     }
