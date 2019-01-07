@@ -38,11 +38,42 @@ impl<'a> Generator<'a> {
         //find all moves
         let moves = self.generate_moves();
         if moves.contains(&move_) {
+            //check castling
+            if move_.is_castling() && !self.is_castling_legal(move_) {
+                return false;
+            }
+
             let mut pos = self.position.clone();
             pos.apply_move(move_);
             return !evaluation::is_check(&pos, color);
         }
         false
+    }
+
+    pub fn is_castling_legal(&self, move_: u32) -> bool {
+        let color = self.position.get_active_color();
+        let other_color = 1 - color;
+
+        //cannot castle out of check
+        if evaluation::is_check(self.position, color) {
+            return false;
+        }
+
+        //check square that is crossed by king
+        let (_, square_to) = move_.get_squares();
+        if square_to == square::G1 {
+            return !evaluation::is_square_attacked(self.position, square::F1, other_color);
+        }
+        else if square_to == square::C1 {
+            return !evaluation::is_square_attacked(self.position, square::D1, other_color);
+        }
+        else if square_to == square::G8 {
+            return !evaluation::is_square_attacked(self.position, square::F8, other_color);
+        }
+        else if square_to == square::C8 {
+            return !evaluation::is_square_attacked(self.position, square::D1, other_color);
+        }
+        false //should never happen
     }
 
     pub fn generate_moves(&self) -> Vec<u32> {
@@ -198,7 +229,6 @@ impl<'a> Generator<'a> {
         let mut result = self.generate_moveboard_moves(current_square, moveboard::MOVEBOARD_KING);
 
         let color = self.position.get_active_color();
-        //TODO king squares cannot be attacked by other color while castling (possibly in eval)
         //castling
         if color == COLOR_WHITE {
             if self.position.get_castling_status(0) {
