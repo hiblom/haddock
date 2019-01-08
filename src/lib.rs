@@ -17,12 +17,13 @@ pub mod piecetype;
 pub mod game;
 pub mod position;
 pub mod parser;
-pub mod piecemove;
 pub mod generator;
 pub mod searchcommand;
 pub mod searcher;
 pub mod outcome;
 pub mod evaluation;
 pub mod tree;
+pub mod bitboard;
+pub mod moveboard;
 
 mod tests;

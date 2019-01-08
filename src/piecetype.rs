@@ -1,11 +1,11 @@
 use crate::global;
 
+pub const PIECE_PAWN: u8 = 0;
 pub const PIECE_KING: u8 = 2;
 pub const PIECE_QUEEN: u8 = 4;
 pub const PIECE_ROOK: u8 = 6;
 pub const PIECE_BISHOP: u8 = 8;
 pub const PIECE_KNIGHT: u8 = 10;
-pub const PIECE_PAWN: u8 = 12;
 
 const MASK_COLOR: u8 = 0b0000_0001;
 const MASK_TYPE: u8 = 0b1111_1110;
@@ -46,6 +46,10 @@ impl PieceType {
         self.0
     }
 
+    pub fn to_usize(self) -> usize {
+        self.0 as usize
+    }
+
     pub fn from_char(value: char) -> Option<PieceType> {
         let piece_value: u8;
 
@@ -80,9 +84,11 @@ impl PieceType {
         c
     }
 
+    /*
     pub fn get_color(self) -> u8 {
         self.0 & MASK_COLOR
     }
+    */
 
     pub fn set_color(&mut self, color: u8) {
         self.0 = (self.0 & MASK_TYPE) | color;
@@ -92,6 +98,7 @@ impl PieceType {
         self.0 & MASK_TYPE
     }
 
+    #[allow(dead_code)]
     pub fn get_move_type(self) -> PieceType {
         let raw_type = self.0 & MASK_TYPE;
         
@@ -102,6 +109,7 @@ impl PieceType {
         PieceType(self.0 & MASK_TYPE)
     }
 
+    #[allow(dead_code)]
     pub fn has_color(self, color: u8) -> bool {
         color == self.0 & MASK_COLOR
     }

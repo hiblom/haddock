@@ -8,153 +8,88 @@ use crate::move_::Move_;
 use crate::piecetype::PieceType;
 use crate::square;
 use crate::square::Square;
+use crate::bitboard::BitBoard;
 
 #[derive(Clone, Copy)]
 pub struct Position {
-    board: [i8; 64],
+    bit_boards: [BitBoard; 12],
     active_color: u8,
     castling_status: [bool; 4],
     enpassant_square: Option<Square>,
     halfmoveclock: u32,
-    fullmovenumber: u32,
-    pieces: [BoardPiece; 32]
-}
-
-#[derive(Clone, Copy)]
-struct BoardPiece {
-    active: bool,
-    piece_type: PieceType,
-    square: Square
-}
-
-impl BoardPiece {
-    fn new(active: bool, piece_type: PieceType, square: Square) -> BoardPiece {
-        BoardPiece {
-            active: active,
-            piece_type: piece_type,
-            square: square
-        }
-    }
+    fullmovenumber: u32
 }
 
 impl Position {
     pub fn new() -> Position {
         Position {
-            board: [-1; 64],
+            bit_boards: [BitBoard::new(); 12],
             active_color: 0,
             castling_status: [true; 4],
             enpassant_square: None,
             halfmoveclock: 0,
-            fullmovenumber: 0,
-            pieces: Position::get_new_pieces()
+            fullmovenumber: 0
         }
     }
 
-    fn get_new_pieces() -> [BoardPiece; 32] {
-        let pieces = [
-            BoardPiece::new(false, PieceType::new_rook(COLOR_WHITE), square::A1), //0
-            BoardPiece::new(false, PieceType::new_knight(COLOR_WHITE), square::B1),
-            BoardPiece::new(false, PieceType::new_bishop(COLOR_WHITE), square::C1),
-            BoardPiece::new(false, PieceType::new_queen(COLOR_WHITE), square::D1),
-            BoardPiece::new(false, PieceType::new_king(COLOR_WHITE), square::E1),
-            BoardPiece::new(false, PieceType::new_bishop(COLOR_WHITE), square::F1),
-            BoardPiece::new(false, PieceType::new_knight(COLOR_WHITE), square::G1),
-            BoardPiece::new(false, PieceType::new_rook(COLOR_WHITE), square::H1),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::A2), //8
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::B2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::C2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::D2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::E2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::F2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::G2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_WHITE), square::H2),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::A6), //16
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::B6),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::C6),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::D6),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::E6),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::F6),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::G6),
-            BoardPiece::new(false, PieceType::new_pawn(COLOR_BLACK), square::H6),
-            BoardPiece::new(false, PieceType::new_rook(COLOR_BLACK), square::A7), //24
-            BoardPiece::new(false, PieceType::new_knight(COLOR_BLACK), square::B7),
-            BoardPiece::new(false, PieceType::new_bishop(COLOR_BLACK), square::C7),
-            BoardPiece::new(false, PieceType::new_queen(COLOR_BLACK), square::D7),
-            BoardPiece::new(false, PieceType::new_king(COLOR_BLACK), square::E7),
-            BoardPiece::new(false, PieceType::new_bishop(COLOR_BLACK), square::F7),
-            BoardPiece::new(false, PieceType::new_knight(COLOR_BLACK), square::G7),
-            BoardPiece::new(false, PieceType::new_rook(COLOR_BLACK), square::H7),
-        ];
-
-        pieces
-    }
-
-    #[allow(dead_code)]
-    pub fn get_board(&self) -> [i8; 64] {
-        self.board
-    }
-
-    pub fn set_piece(&mut self, square: Square, piece_type: PieceType) -> bool {
-        for i in 0..self.pieces.len() {
-            if !self.pieces[i].active && self.pieces[i].piece_type == piece_type {
-                self.board[square.to_usize()] = i as i8;
-                self.pieces[i].active = true;
-                self.pieces[i].square = square;
-                return true;
-            }
-        }
-
-        false
+    pub fn set_piece(&mut self, square: Square, piece_type: PieceType) {
+        self.bit_boards[piece_type.to_usize()].set(square);
     }
     
-    pub fn remove_piece(&mut self, square: Square) {
-        let i = self.board[square.to_usize()];
-        self.pieces[i as usize].active = false;
-        self.board[square.to_usize()] = -1;
+    pub fn remove_piece(&mut self, square: Square, piece_type: PieceType) {
+        self.bit_boards[piece_type.to_usize()].clear(square);
     }
 
     pub fn get_piece(&self, square: Square) -> Option<PieceType> {
-        let i = self.board[square.to_usize()];
-        if i == -1 {
-            return None;
+        for piece_value in 0usize..12 {
+            if self.bit_boards[piece_value].check(square) {
+                return Some(PieceType::new(piece_value as u8));
+            }
         }
-        Some(self.pieces[i as usize].piece_type)
-    }
-
-    pub fn get_king_square(&self, color: u8) -> Option<Square> {
-        let i = match color {
-            global::COLOR_WHITE => 4,
-            _ => 28
-        };
-
-        if self.pieces[i].active {
-            return Some(self.pieces[i].square);
-        }
-
         None
     }
 
-    pub fn get_active_pieces(&self) -> Vec<(PieceType, Square)> {
+    pub fn get_king_square(&self, color: u8) -> Square {
+        let piece = PieceType::new_king(color);
+        return self.bit_boards[piece.to_usize()].get_square();
+    }
+
+    pub fn get_active_color_pieces(&self) -> Vec<(PieceType, Square)> {
         let mut result: Vec<(PieceType, Square)> = Vec::new();
-        let start_index = (self.active_color << 4) as usize;
-        for i in start_index..start_index + 16 {
-            let p = self.pieces[i];
-            if p.active {
-                result.push((p.piece_type, p.square));
+        for piece_value in (self.active_color..12).step_by(2) {
+            let squares = self.bit_boards[piece_value as usize].get_squares();
+            for square in squares {
+                result.push((PieceType::new(piece_value), square));
             }
+            
         }
         result
     }
 
     pub fn get_all_active_pieces(&self) -> Vec<(PieceType, Square)> {
         let mut result: Vec<(PieceType, Square)> = Vec::new();
-        for i in 0..32 {
-            let p = self.pieces[i];
-            if p.active {
-                result.push((p.piece_type, p.square));
+        for piece_value in 0..12 {
+            let squares = self.bit_boards[piece_value as usize].get_squares();
+            for square in squares {
+                result.push((PieceType::new(piece_value), square));
             }
+            
         }
         result
+    }
+
+    pub fn get_piece_board(&self, color: u8) -> BitBoard {
+        return 
+            self.bit_boards[PieceType::new_pawn(color).to_usize()] |
+            self.bit_boards[PieceType::new_king(color).to_usize()] |
+            self.bit_boards[PieceType::new_queen(color).to_usize()] |
+            self.bit_boards[PieceType::new_rook(color).to_usize()] |
+            self.bit_boards[PieceType::new_bishop(color).to_usize()] |
+            self.bit_boards[PieceType::new_knight(color).to_usize()];
+    }
+
+    pub fn get_bit_board(&self, piece: PieceType) -> BitBoard {
+        return self.bit_boards[piece.to_usize()];
     }
 
     pub fn set_active_color(&mut self, color: u8) {
@@ -202,40 +137,40 @@ impl Position {
         self.fullmovenumber
     }
 
-    fn apply_simple_move(&mut self, square_from: Square, square_to: Square) {
-        let piece_index = self.board[square_from.to_usize()];
-        self.board[square_to.to_usize()] = piece_index;
-        self.pieces[piece_index as usize].square = square_to;
-        self.board[square_from.to_usize()] = -1;
+    fn apply_simple_move(&mut self, square_from: Square, square_to: Square, piece_type: PieceType) {
+        self.set_piece(square_to, piece_type);
+        self.remove_piece(square_from, piece_type);
     }
 
     pub fn apply_move(&mut self, mv: u32) {
-        //NOTE all moves should be checked at this point
         let move_ = Move_::new(mv);
         let (square_from, square_to) = move_.get_squares();
 
-        let piece_index_from = self.board[square_from.to_usize()];
-
+        //let piece_index_from = self.board[square_from.to_usize()];
         let piece;
         match self.get_piece(square_from) {
             Some(p) => piece = p,
-            None => panic!("No piece found at {}", square_from.to_fen())
+            None => panic!("No piece found at square {}", square_from.to_fen())
         }
 
         let mut capture = false;
-        if self.board[square_to.to_usize()] != -1 {
-            capture = true;
-            self.remove_piece(square_to);
+        match self.get_piece(square_to) {
+            Some(p) => {
+                capture = true;
+                self.remove_piece(square_to, p);
+            },
+            None => ()
         }
 
-        self.apply_simple_move(square_from, square_to);
+        self.apply_simple_move(square_from, square_to, piece);
 
         //en-passant square is filled, pawn moves to it -> en-passant
         //pawn on square in front of en-passant square gets captured
         if move_.is_enpassant() {
             let (x_cap, _) = square_to.to_xy(); // captured pawn has same file as ep square
             let (_, y_cap) = square_from.to_xy(); // captured pawn has same rank as capturing pawn start pos
-            self.remove_piece(Square::from_xy(x_cap, y_cap));
+            
+            self.remove_piece(Square::from_xy(x_cap, y_cap), PieceType::new_pawn(1 - self.active_color));
             capture = true;
         }
 
@@ -243,7 +178,8 @@ impl Position {
         if move_.is_promotion() {
             let mut promo_piece = move_.get_promo_piece();
             promo_piece.set_color(self.get_active_color());
-            self.pieces[piece_index_from as usize].piece_type = promo_piece;
+            self.remove_piece(square_to, piece);
+            self.set_piece(square_to, promo_piece);
         }
 
         //castling
@@ -251,28 +187,28 @@ impl Position {
         if move_.is_castling() {
             //e1c1
             if (square_from, square_to) == (square::E1, square::C1) {
-                self.apply_simple_move(square::A1, square::D1);
+                self.apply_simple_move(square::A1, square::D1, PieceType::new_rook(COLOR_WHITE));
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e1g1
             else if (square_from, square_to) == (square::E1, square::G1) {
-                self.apply_simple_move(square::H1, square::F1);
+                self.apply_simple_move(square::H1, square::F1, PieceType::new_rook(COLOR_WHITE));
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e8c8
             else if (square_from, square_to) == (square::E8, square::C8) {
-                self.apply_simple_move(square::A8, square::D8);
+                self.apply_simple_move(square::A8, square::D8, PieceType::new_rook(COLOR_BLACK));
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;
             }
             //e8g8
             else if (square_from, square_to) == (square::E8, square::G8) {
-                self.apply_simple_move(square::H8, square::F8);
+                self.apply_simple_move(square::H8, square::F8, PieceType::new_rook(COLOR_BLACK));
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;
@@ -401,19 +337,20 @@ impl Position {
 
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut res = "-----------------\n".to_string();
+        let mut res = "".to_string();
         for y in (0u8..8).rev() {
+            res.push_str(&format!("{} ", y + 1));
             for x in 0u8..8 {
                 let piece = self.get_piece(Square::from_xy(x, y));
                 let c = match piece {
                     Some(p) => p.to_char(),
-                    None => ' '
+                    None => '.'
                 };
-                res.push_str(&format!("|{}", c));
+                res.push(c);
             }
-            res.push_str("|\n");
-            res.push_str("-----------------\n");
+            res.push_str("\n");
         }
+        res.push_str("  abcdefgh\n");
         write!(f, "{}", res)
     }
 }

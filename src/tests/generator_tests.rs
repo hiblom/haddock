@@ -1,3 +1,7 @@
+use crate::generator::Generator;
+use crate::global::COLOR_WHITE;
+use crate::piecetype::PieceType;
+
 fn mv(pos: &crate::position::Position, mv_str: &str) -> u32 {
     let move_ = crate::move_::Move_::from_str(mv_str).unwrap();
     pos.analyze_move(move_)
@@ -28,7 +32,7 @@ fn test_king_moves_middle() {
     ];
 
     //act
-    let moves = crate::generator::generate_king_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_king(COLOR_WHITE));
 
     //assert
     assert_eq!(
@@ -59,9 +63,20 @@ fn test_king_moves_corner() {
     ];
 
     //act
-    let moves = crate::generator::generate_king_moves(&position, sq("a1"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("a1"), PieceType::new_king(COLOR_WHITE));
 
     //assert
+    println!("expected_moves moves:");
+    for move_ in expected_moves.iter() {
+        println!("{}", crate::move_::Move_::get_fen(*move_));
+    }
+
+    println!("generated moves:");
+    for move_ in moves.iter() {
+        println!("{}", crate::move_::Move_::get_fen(*move_));
+    }
+
+
     assert_eq!(
         expected_moves.len(),
         moves.len(),
@@ -88,7 +103,7 @@ fn test_king_moves_other_pieces() {
     ];
 
     //act
-    let moves = crate::generator::generate_king_moves(&position, sq("a1"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("a1"), PieceType::new_king(COLOR_WHITE));
 
     //assert
     assert_eq!(
@@ -129,7 +144,7 @@ fn test_rook_moves_middle() {
     ];
 
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_rook(COLOR_WHITE));
 
     //assert
     assert_eq!(
@@ -170,7 +185,7 @@ fn test_rook_moves_corner() {
     ];
 
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h8"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("h8"), PieceType::new_rook(COLOR_WHITE));
 
     //assert
     assert_eq!(
@@ -200,9 +215,19 @@ fn test_rook_moves_other_pieces() {
     ];
 
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h8"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("h8"), PieceType::new_rook(COLOR_WHITE));
 
     //assert
+    println!("expected_moves moves:");
+    for move_ in expected_moves.iter() {
+        println!("{}", crate::move_::Move_::get_fen(*move_));
+    }
+
+    println!("generated moves:");
+    for move_ in moves.iter() {
+        println!("{}", crate::move_::Move_::get_fen(*move_));
+    }
+
     assert_eq!(
         expected_moves.len(),
         moves.len(),
@@ -235,7 +260,7 @@ fn test_knight_moves_middle() {
     ];
 
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_knight(COLOR_WHITE));
 
     //assert
     println!("expected_moves moves:");
@@ -278,7 +303,7 @@ fn test_knight_moves_corner() {
     ];
 
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h1"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("h1"), PieceType::new_knight(COLOR_WHITE));
 
     //assert
     println!("expected_moves moves:");
@@ -315,7 +340,7 @@ fn test_knight_moves_startpos_b1() {
     ];
 
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("b1"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("b1"), PieceType::new_knight(COLOR_WHITE));
 
     //assert
     println!("expected_moves moves:");
@@ -351,7 +376,7 @@ fn test_pawn_moves_startpos_e2() {
     ];
     
     //act
-    let moves = crate::generator::generate_pawn_moves(&position, sq("e2"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_pawn_moves(sq("e2"));
 
     //assert
     assert_eq!(
@@ -368,7 +393,8 @@ fn test_pawn_moves_startpos_e2() {
 #[test]
 fn test_pawn_moves_startpos_e7() {
     //arrange
-    let position = crate::parser::parse_startpos().unwrap();
+    let mut position = crate::parser::parse_startpos().unwrap();
+    position.set_active_color(crate::global::COLOR_BLACK);
 
     let expected_moves: [u32; 2] = [
         mv(&position, "e7e6"),
@@ -376,7 +402,7 @@ fn test_pawn_moves_startpos_e7() {
     ];
     
     //act
-    let moves = crate::generator::generate_pawn_moves(&position, sq("e7"), crate::global::COLOR_BLACK);
+    let moves = Generator::new(&position).generate_pawn_moves(sq("e7"));
 
     //assert
     assert_eq!(
@@ -404,7 +430,7 @@ fn test_pawn_moves_capture() {
     ];
     
     //act
-    let moves = crate::generator::generate_pawn_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_pawn_moves(sq("d4"));
 
     //assert
     assert_eq!(
@@ -443,7 +469,7 @@ fn test_bishop_moves_middle() {
     ];
     
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("d4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_bishop(COLOR_WHITE));
 
     //assert
     assert_eq!(
@@ -476,7 +502,7 @@ fn test_bishop_moves_edge() {
     ];
     
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("h4"), PieceType::new_bishop(COLOR_WHITE));
 
     //assert
     assert_eq!(
@@ -486,7 +512,7 @@ fn test_bishop_moves_edge() {
     );
 
     for expected_move in expected_moves.iter() {
-        assert!(moves.contains(expected_move), "Pawn moves not as expected");
+        assert!(moves.contains(expected_move), "Bishop moves not as expected");
     }
 }
 
@@ -505,7 +531,7 @@ fn test_bishop_moves_other_pieces() {
     ];
     
     //act
-    let moves = crate::generator::generate_normal_piece_moves(&position, sq("h4"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_piece_moves(sq("h4"), PieceType::new_bishop(COLOR_WHITE));
 
     //assert
     println!("expected_moves moves:");
@@ -545,7 +571,7 @@ fn test_pawn_moves_ep() {
     ];
     
     //act
-    let moves = crate::generator::generate_pawn_moves(&position, sq("d5"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_pawn_moves(sq("d5"));
 
     //assert
     assert_eq!(
@@ -574,7 +600,7 @@ fn test_pawn_moves_promo() {
     ];
     
     //act
-    let moves = crate::generator::generate_pawn_moves(&position, sq("e7"), crate::global::COLOR_WHITE);
+    let moves = Generator::new(&position).generate_pawn_moves(sq("e7"));
 
     //assert
     assert_eq!(
@@ -602,7 +628,7 @@ fn test_king_castling() {
     ];
     
     //act
-    let moves = crate::generator::generate_king_moves(&position, sq("e8"), crate::global::COLOR_BLACK);
+    let moves = Generator::new(&position).generate_king_moves(sq("e8"));
 
     //assert
     assert_eq!(
@@ -630,7 +656,7 @@ fn test_king_castling_sq_taken() {
     ];
     
     //act
-    let moves = crate::generator::generate_king_moves(&position, sq("e8"), crate::global::COLOR_BLACK);
+    let moves = Generator::new(&position).generate_king_moves(sq("e8"));
 
     //assert
     assert_eq!(
@@ -658,7 +684,7 @@ fn test_king_castling_no_status() {
     ];
     
     //act
-    let moves = crate::generator::generate_king_moves(&position, sq("e8"), crate::global::COLOR_BLACK);
+    let moves = Generator::new(&position).generate_king_moves(sq("e8"));
 
     //assert
     assert_eq!(
@@ -689,7 +715,7 @@ fn test_legal_moves() {
     ];
     
     //act
-    let moves = crate::generator::generate_legal_moves(&position);
+    let moves = Generator::new(&position).generate_legal_moves(&position);
 
     //assert
     assert_eq!(

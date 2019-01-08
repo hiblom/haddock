@@ -11,7 +11,7 @@ use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searcher::Searcher;
 use crate::move_::Move_;
-use crate::generator;
+use crate::generator::Generator;
 
 pub struct Game {
     receiver: Receiver<InputCommand>,
@@ -114,11 +114,12 @@ impl<'a> Game {
                             match Move_::from_str(args_parts[i]) {
                                 Some(mv) => {
                                     let mv = pos.analyze_move(mv);
-                                    if generator::is_legal_move(pos, mv) {
+                                    if Generator::new(pos).is_legal_move(mv) {
                                         pos.apply_move(mv);
                                     }
                                     else {
                                         println!("{} is an illegal move!", &args_parts[i]);
+                                        println!("internal position:\n{}", pos);
                                         return true;  
                                     }
                                 }, 

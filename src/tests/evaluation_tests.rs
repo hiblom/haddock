@@ -12,7 +12,7 @@ fn test_is_check_startpos() {
     let position = crate::parser::parse_startpos().unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.get_active_color());
+    let check = crate::generator::Generator::new(&position).is_check(position.get_active_color());
 
     //assert
     assert_eq!(
@@ -32,7 +32,7 @@ fn test_is_check_by_queen() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.get_active_color());
+    let check = crate::generator::Generator::new(&position).is_check(position.get_active_color());
 
     //assert
     assert_eq!(
@@ -51,7 +51,7 @@ fn test_is_check_by_rook() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.get_active_color());
+    let check = crate::generator::Generator::new(&position).is_check(position.get_active_color());
 
     //assert
     assert_eq!(
@@ -70,7 +70,7 @@ fn test_is_check_by_bishop() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.get_active_color());
+    let check = crate::generator::Generator::new(&position).is_check(position.get_active_color());
 
     //assert
     assert_eq!(
@@ -89,7 +89,7 @@ fn test_is_check_by_knight() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.get_active_color());
+    let check = crate::generator::Generator::new(&position).is_check(position.get_active_color());
 
     //assert
     assert_eq!(
@@ -108,7 +108,7 @@ fn test_is_check_by_pawn() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
     
     //act
-    let check = crate::evaluation::is_check(&position, position.get_active_color());
+    let check = crate::generator::Generator::new(&position).is_check(position.get_active_color());
 
     //assert
     assert_eq!(
@@ -143,22 +143,3 @@ fn test_fools_mate() {
     );
 }
 */
-
-#[test]
-fn test_some_pos() {
-    //arrange
-    let mut position = crate::parser::parse_startpos().unwrap();
-    
-
-
-    //act
-    let score = crate::evaluation::evaluate(&position);
-
-    //assert
-    assert_eq!(
-        crate::outcome::Outcome::WhiteIsMate(0),
-        score,
-        "Check mate not as expected\n{}",
-        position
-    );
-}

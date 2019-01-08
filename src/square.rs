@@ -202,6 +202,10 @@ impl Square {
         (x, y)
     }
 
+    pub fn to_u8(self) -> u8 {
+        self.0
+    }
+
     pub fn to_usize(self) -> usize {
         self.0 as usize
     }
@@ -226,6 +230,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn left(self) -> Option<Square> {
         let x = self.0 & MASK;
         if x > 0 {
@@ -234,6 +239,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn right(self) -> Option<Square> {
         let x = self.0 & MASK;
         if x < 7 {
@@ -242,6 +248,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn up_left(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -251,6 +258,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn up_right(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -260,6 +268,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn down_left(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -269,6 +278,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn down_right(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -278,6 +288,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn up_up_right(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -287,6 +298,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn up_up_left(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -296,6 +308,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn down_down_right(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -305,6 +318,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn down_down_left(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -314,6 +328,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn up_right_right(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -323,6 +338,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn up_left_left(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -332,6 +348,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn down_right_right(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
@@ -341,6 +358,7 @@ impl Square {
         None
     }
 
+    #[allow(dead_code)]
     pub fn down_left_left(self) -> Option<Square> {
         let x = self.0 & MASK;
         let y = self.0 >> 3;
