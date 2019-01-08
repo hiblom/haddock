@@ -1,8 +1,11 @@
+#[allow(unused_imports)]
 use crate::generator::Generator;
+#[allow(unused_imports)]
 use crate::global::COLOR_WHITE;
+#[allow(unused_imports)]
 use crate::piecetype::PieceType;
 
-fn mv(pos: &crate::position::Position, mv_str: &str) -> u32 {
+fn mv(pos: &crate::position::Position, mv_str: &str) -> crate::move_::Move_ {
     let move_ = crate::move_::Move_::from_str(mv_str).unwrap();
     pos.analyze_move(move_)
 }
@@ -20,7 +23,7 @@ fn test_king_moves_middle() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 8] = [
+    let expected_moves: [crate::move_::Move_; 8] = [
         mv(&position, "d4c5"),
         mv(&position, "d4d5"),
         mv(&position, "d4e5"),
@@ -56,7 +59,7 @@ fn test_king_moves_corner() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 3] = [
+    let expected_moves: [crate::move_::Move_; 3] = [
         mv(&position, "a1a2"),
         mv(&position, "a1b1"),
         mv(&position, "a1b2"),
@@ -97,7 +100,7 @@ fn test_king_moves_other_pieces() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "a1b1"),
         mv(&position, "a1b2"),
     ];
@@ -126,7 +129,7 @@ fn test_rook_moves_middle() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 14] = [
+    let expected_moves: [crate::move_::Move_; 14] = [
         mv(&position, "d4d1"),
         mv(&position, "d4d2"),
         mv(&position, "d4d3"),
@@ -167,7 +170,7 @@ fn test_rook_moves_corner() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 14] = [
+    let expected_moves: [crate::move_::Move_; 14] = [
         mv(&position, "h8h1"),
         mv(&position, "h8h2"),
         mv(&position, "h8h3"),
@@ -208,7 +211,7 @@ fn test_rook_moves_other_pieces() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 3] = [
+    let expected_moves: [crate::move_::Move_; 3] = [
         mv(&position, "h8f8"),
         mv(&position, "h8g8"),
         mv(&position, "h8h7"), //capture
@@ -248,7 +251,7 @@ fn test_knight_moves_middle() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 8] = [
+    let expected_moves: [crate::move_::Move_; 8] = [
         mv(&position, "d4c2"),
         mv(&position, "d4e2"),
         mv(&position, "d4b3"),
@@ -297,7 +300,7 @@ fn test_knight_moves_corner() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "h1f2"),
         mv(&position, "h1g3"),
     ];
@@ -334,7 +337,7 @@ fn test_knight_moves_startpos_b1() {
     //create start pos board, calc knight moves of b1
     let position = crate::parser::parse_startpos().unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "b1a3"),
         mv(&position, "b1c3"),
     ];
@@ -370,7 +373,7 @@ fn test_pawn_moves_startpos_e2() {
     //arrange
     let position = crate::parser::parse_startpos().unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "e2e3"),
         mv(&position, "e2e4"),
     ];
@@ -396,7 +399,7 @@ fn test_pawn_moves_startpos_e7() {
     let mut position = crate::parser::parse_startpos().unwrap();
     position.set_active_color(crate::global::COLOR_BLACK);
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "e7e6"),
         mv(&position, "e7e5"),
     ];
@@ -424,7 +427,7 @@ fn test_pawn_moves_capture() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "d4d5"),
         mv(&position, "d4e5"),
     ];
@@ -452,7 +455,7 @@ fn test_bishop_moves_middle() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 13] = [
+    let expected_moves: [crate::move_::Move_; 13] = [
         mv(&position, "d4a1"),
         mv(&position, "d4b2"),
         mv(&position, "d4c3"),
@@ -491,7 +494,7 @@ fn test_bishop_moves_edge() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 7] = [
+    let expected_moves: [crate::move_::Move_; 7] = [
         mv(&position, "h4d8"),
         mv(&position, "h4e7"),
         mv(&position, "h4f6"),
@@ -524,7 +527,7 @@ fn test_bishop_moves_other_pieces() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 3] = [
+    let expected_moves: [crate::move_::Move_; 3] = [
         mv(&position, "h4g5"),
         mv(&position, "h4g3"),
         mv(&position, "h4f2"),
@@ -565,7 +568,7 @@ fn test_pawn_moves_ep() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         mv(&position, "d5d6"),
         mv(&position, "d5e6"),
     ];
@@ -592,7 +595,7 @@ fn test_pawn_moves_promo() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 4] = [
+    let expected_moves: [crate::move_::Move_; 4] = [
         mv(&position, "e7e8q"),
         mv(&position, "e7e8r"),
         mv(&position, "e7e8b"),
@@ -622,7 +625,7 @@ fn test_king_castling() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 2] = [
+    let expected_moves: [crate::move_::Move_; 2] = [
         position.analyze_move(mv(&position, "e8d8")),
         position.analyze_move(mv(&position, "e8c8"))
     ];
@@ -651,7 +654,7 @@ fn test_king_castling_sq_taken() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 1] = [
+    let expected_moves: [crate::move_::Move_; 1] = [
         mv(&position, "e8d8")
     ];
     
@@ -679,7 +682,7 @@ fn test_king_castling_no_status() {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
-    let expected_moves: [u32; 1] = [
+    let expected_moves: [crate::move_::Move_; 1] = [
         mv(&position, "e8d8")
     ];
     
@@ -710,7 +713,7 @@ fn test_legal_moves() {
     let position = crate::parser::parse_fen(&fen_parts).unwrap();
 
     //only one legal move
-    let expected_moves: [u32; 1] = [
+    let expected_moves: [crate::move_::Move_; 1] = [
         mv(&position, "h8h7")
     ];
     

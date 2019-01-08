@@ -67,10 +67,10 @@ impl Searcher {
         }
 
         let best_move = self.search_tree(max_depth);
-        println!("bestmove {}", Move_::get_fen(best_move));
+        println!("bestmove {}", best_move.get_fen());
      }
 
-    fn search_tree(&mut self, max_depth: u64) -> u32 {
+    fn search_tree(&mut self, max_depth: u64) -> Move_ {
         let current_pos = &self.base_position.clone();
 
         self.set_times();
@@ -84,7 +84,7 @@ impl Searcher {
         
         let current_node = &mut tree;
 
-        let mut best_move:Option<u32> = None;
+        let mut best_move:Option<Move_> = None;
         for depth in 1 .. (max_depth + 1) {
             let (stopped, _, _, total_nodes, pv) = self.traverse_tree(current_node, current_pos, 1);
             if stopped {
@@ -193,13 +193,13 @@ impl Searcher {
         }
     }
 
-    fn traverse_tree(&self, node: &mut Tree, position: &Position, depth: i32) -> (bool, Option<Outcome>, Option<u32>, u32, Vec<u32>) {
+    fn traverse_tree(&self, node: &mut Tree, position: &Position, depth: i32) -> (bool, Option<Outcome>, Option<Move_>, u32, Vec<Move_>) {
         if self.must_stop() {
             return (true, None, None, 0, Vec::new());
         }
 
         let mut current_nodes = 0u32;
-        let mut pv: Vec<u32> = Vec::new();
+        let mut pv: Vec<Move_> = Vec::new();
         match node.best_score {
             Some(mut s) => {
                 //go back when we reached an end (mate, draw)
@@ -215,7 +215,7 @@ impl Searcher {
                 //we must go deeper
                 node.best_score = None;
                 node.best_move = None;
-                let mut best_sub_pv: Vec<u32> = Vec::new();
+                let mut best_sub_pv: Vec<Move_> = Vec::new();
                 if let Some(mut sub_trees) = node.sub_trees.take() {
                     for (move_, sub_tree) in sub_trees.iter_mut() {
                         let mut pos = position.clone();
@@ -242,7 +242,7 @@ impl Searcher {
                 }
             },
             None => {
-                let mut sub_trees: HashMap<u32, Tree> = HashMap::new();
+                let mut sub_trees: HashMap<Move_, Tree> = HashMap::new();
                 let moves = Generator::new(position).generate_moves();
                 
                 for move_ in &moves {
@@ -312,13 +312,13 @@ impl Searcher {
         }
     }
 
-    fn get_moves_string(moves: &Vec<u32>) -> String {
+    fn get_moves_string(moves: &Vec<Move_>) -> String {
         let mut moves_string = "".to_string();
         for mv in moves {
             if moves_string.len() > 0 {
                 moves_string.push_str(" ");
             }
-            moves_string.push_str(&Move_::get_fen(*mv));
+            moves_string.push_str(&mv.get_fen());
         }
         moves_string
     }

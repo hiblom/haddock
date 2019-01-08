@@ -142,8 +142,7 @@ impl Position {
         self.remove_piece(square_from, piece_type);
     }
 
-    pub fn apply_move(&mut self, mv: u32) {
-        let move_ = Move_::new(mv);
+    pub fn apply_move(&mut self, move_: Move_) {
         let (square_from, square_to) = move_.get_squares();
 
         //let piece_index_from = self.board[square_from.to_usize()];
@@ -294,10 +293,11 @@ impl Position {
         self.active_color = 1 - self.active_color;
     }
 
-    pub fn analyze_move(&self, mv: u32) -> u32 {
+    
+
+    pub fn analyze_move(&self, mut move_: Move_) -> Move_ {
         //find out if ep, or castling
         //promotion is already set during parsing
-        let mut move_ = Move_::new(mv);
         move_.set_enpassant(false);
         move_.set_castling(false);
 

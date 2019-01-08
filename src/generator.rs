@@ -31,7 +31,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    pub fn is_legal_move(&self, move_: u32) -> bool {
+    pub fn is_legal_move(&self, move_: Move_) -> bool {
         let color = self.position.get_active_color();
         //find all moves
         let moves = self.generate_moves();
@@ -48,7 +48,7 @@ impl<'a> Generator<'a> {
         false
     }
 
-    pub fn is_castling_legal(&self, move_: u32) -> bool {
+    pub fn is_castling_legal(&self, move_: Move_) -> bool {
         let color = self.position.get_active_color();
 
         //cannot castle out of check
@@ -73,8 +73,8 @@ impl<'a> Generator<'a> {
         false //should never happen
     }
 
-    pub fn generate_moves(&self) -> Vec<u32> {
-        let mut result: Vec<u32> = Vec::new();
+    pub fn generate_moves(&self) -> Vec<Move_> {
+        let mut result: Vec<Move_> = Vec::new();
 
         for (piece_type, square) in self.position.get_active_color_pieces() {
             let mut piece_moves = self.generate_piece_moves(square, piece_type);
@@ -84,7 +84,7 @@ impl<'a> Generator<'a> {
         result
     }
 
-    pub fn generate_piece_moves(&self, square: Square, piece_type: PieceType) -> Vec<u32> {
+    pub fn generate_piece_moves(&self, square: Square, piece_type: PieceType) -> Vec<Move_> {
 
         let pt = piece_type.get_type();
         match pt {
@@ -98,8 +98,8 @@ impl<'a> Generator<'a> {
         }
     }
 
-     fn generate_moveboard_moves(&self, current_square: Square, mb: usize) -> Vec<u32> {
-        let mut result: Vec<u32> = Vec::new();
+     fn generate_moveboard_moves(&self, current_square: Square, mb: usize) -> Vec<Move_> {
+        let mut result: Vec<Move_> = Vec::new();
 
         let mut move_board = moveboard::get_move_board(mb, current_square);
         move_board &= !self.own_piece_board; //exclude moves to pieces of same color
@@ -111,8 +111,8 @@ impl<'a> Generator<'a> {
         result
     }
 
-    fn generate_rook_moves(&self, current_square: Square) -> Vec<u32> {
-        let mut result: Vec<u32> = Vec::new();
+    fn generate_rook_moves(&self, current_square: Square) -> Vec<Move_> {
+        let mut result: Vec<Move_> = Vec::new();
 
         let mut move_board = BitBoard::new();
         move_board |= self.generate_move_board(moveboard::DIR_UP, current_square, BitBoard::get_lowest_square);
@@ -127,8 +127,8 @@ impl<'a> Generator<'a> {
         result
     }
 
-    fn generate_bishop_moves(&self, current_square: Square) -> Vec<u32> {
-        let mut result: Vec<u32> = Vec::new();
+    fn generate_bishop_moves(&self, current_square: Square) -> Vec<Move_> {
+        let mut result: Vec<Move_> = Vec::new();
 
         let mut move_board = BitBoard::new();
         move_board |= self.generate_move_board(moveboard::DIR_UP_RIGHT, current_square, BitBoard::get_lowest_square);
@@ -143,8 +143,8 @@ impl<'a> Generator<'a> {
         result
     }
 
-    fn generate_queen_moves(&self, current_square: Square) -> Vec<u32> {
-        let mut result: Vec<u32> = Vec::new();
+    fn generate_queen_moves(&self, current_square: Square) -> Vec<Move_> {
+        let mut result: Vec<Move_> = Vec::new();
 
         let mut move_board = BitBoard::new();
         move_board |= self.generate_move_board(moveboard::DIR_UP, current_square, BitBoard::get_lowest_square);
@@ -179,7 +179,7 @@ impl<'a> Generator<'a> {
         move_board
     }
 
-    pub fn generate_king_moves(&self, current_square: Square) -> Vec<u32> {
+    pub fn generate_king_moves(&self, current_square: Square) -> Vec<Move_> {
         let mut result = self.generate_moveboard_moves(current_square, moveboard::MOVEBOARD_KING);
 
         let color = self.position.get_active_color();
@@ -189,7 +189,7 @@ impl<'a> Generator<'a> {
                 //white K-side
                 if  self.position.get_piece(square::F1).is_none() && 
                     self.position.get_piece(square::G1).is_none() {
-                        let mut mv:u32 = Move_::from_squares(square::E1, square::G1);
+                        let mut mv = Move_::from_squares(square::E1, square::G1);
                         mv.set_castling(true);
                         result.push(mv);
                 }
@@ -199,7 +199,7 @@ impl<'a> Generator<'a> {
                 if  self.position.get_piece(square::B1).is_none() && 
                     self.position.get_piece(square::C1).is_none() && 
                     self.position.get_piece(square::D1).is_none() {
-                        let mut mv:u32 = Move_::from_squares(square::E1, square::C1);
+                        let mut mv = Move_::from_squares(square::E1, square::C1);
                         mv.set_castling(true);
                         result.push(mv);
                 }
@@ -210,7 +210,7 @@ impl<'a> Generator<'a> {
                 //black K-side
                 if  self.position.get_piece(square::F8).is_none() && 
                     self.position.get_piece(square::G8).is_none() {
-                        let mut mv:u32 = Move_::from_squares(square::E8, square::G8);
+                        let mut mv = Move_::from_squares(square::E8, square::G8);
                         mv.set_castling(true);
                         result.push(mv);
                 }
@@ -220,7 +220,7 @@ impl<'a> Generator<'a> {
                 if  self.position.get_piece(square::B8).is_none() && 
                     self.position.get_piece(square::C8).is_none() && 
                     self.position.get_piece(square::D8).is_none() {
-                        let mut mv:u32 = Move_::from_squares(square::E8, square::C8);
+                        let mut mv = Move_::from_squares(square::E8, square::C8);
                         mv.set_castling(true);
                         result.push(mv);
                 }
@@ -230,9 +230,9 @@ impl<'a> Generator<'a> {
         result
     }
 
-    pub fn generate_pawn_moves(&self, current_square: Square) -> Vec<u32> {
+    pub fn generate_pawn_moves(&self, current_square: Square) -> Vec<Move_> {
         let color = self.position.get_active_color();
-        let mut moves: Vec<u32> = Vec::new();
+        let mut moves: Vec<Move_> = Vec::new();
 
         let mut move_board = moveboard::get_move_board(PAWN_PUSH_MOVEBOARD[color as usize], current_square);
         move_board &= !self.all_piece_board; //exclude moves to occupied squares
@@ -271,7 +271,7 @@ impl<'a> Generator<'a> {
             Some(ep_sq) => {
                 let ep_bb = BitBoard::from_square(ep_sq);
                 if (ep_bb & cap_board).not_empty() {
-                    let mut mv:u32 = Move_::from_squares(current_square, ep_sq);
+                    let mut mv = Move_::from_squares(current_square, ep_sq);
                     mv.set_enpassant(true);
                     moves.push(mv);
                 }
@@ -279,7 +279,7 @@ impl<'a> Generator<'a> {
         }
 
         //promotion
-        let mut result: Vec<u32> = Vec::new();
+        let mut result: Vec<Move_> = Vec::new();
 
         for m in moves {
             let (_, sq_to) = Move_::get_squares(m);

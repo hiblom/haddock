@@ -1,4 +1,4 @@
-fn mv(mv_str: &str) -> u32 {
+fn mv(mv_str: &str) -> crate::move_::Move_ {
     crate::move_::Move_::from_str(mv_str).unwrap()
 }
 

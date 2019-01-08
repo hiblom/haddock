@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use crate::outcome::Outcome;
+use crate::move_::Move_;
 
 pub struct Tree {
     pub start_score: Outcome,
     pub best_score: Option<Outcome>,
-    pub best_move: Option<u32>,
-    pub sub_trees: Option<HashMap<u32, Tree>>
+    pub best_move: Option<Move_>,
+    pub sub_trees: Option<HashMap<Move_, Tree>>
 }
