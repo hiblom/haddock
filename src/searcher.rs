@@ -201,15 +201,10 @@ impl Searcher {
         let mut current_nodes = 0u32;
         let mut pv: Vec<Move_> = Vec::new();
         match node.best_score {
-            Some(mut s) => {
+            Some(s) => {
                 //go back when we reached an end (mate, draw)
                 if s.end() {
                     //increase mate count
-                    match s {
-                        Outcome::WhiteIsMate(n) => s = Outcome::WhiteIsMate(n + 1),
-                        Outcome::BlackIsMate(n) => s = Outcome::BlackIsMate(n + 1),
-                        _ => ()
-                    }
                     return (false, Some(s), node.best_move, current_nodes,  Vec::new())
                 }
                 //we must go deeper

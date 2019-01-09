@@ -265,7 +265,7 @@ impl<'a> Game {
     
         let position_clone: Position;
         
-        match self.position {
+        match &self.position {
             Some(p) => position_clone = p.clone(),
             None => {
                 println!("Cannot setup search without position");

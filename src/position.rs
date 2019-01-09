@@ -185,28 +185,28 @@ impl Position {
         let mut castled = false;
         if move_.is_castling() {
             //e1c1
-            if (square_from, square_to) == (square::E1, square::C1) {
+            if square_to == square::C1 {
                 self.apply_simple_move(square::A1, square::D1, PieceType::new_rook(COLOR_WHITE));
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e1g1
-            else if (square_from, square_to) == (square::E1, square::G1) {
+            else if square_to ==square::G1 {
                 self.apply_simple_move(square::H1, square::F1, PieceType::new_rook(COLOR_WHITE));
                 castled = true;
                 self.castling_status[0] = false;
                 self.castling_status[1] = false;
             }
             //e8c8
-            else if (square_from, square_to) == (square::E8, square::C8) {
+            else if square_to == square::C8 {
                 self.apply_simple_move(square::A8, square::D8, PieceType::new_rook(COLOR_BLACK));
                 castled = true;
                 self.castling_status[2] = false;
                 self.castling_status[3] = false;
             }
             //e8g8
-            else if (square_from, square_to) == (square::E8, square::G8) {
+            else if square_to == square::G8 {
                 self.apply_simple_move(square::H8, square::F8, PieceType::new_rook(COLOR_BLACK));
                 castled = true;
                 self.castling_status[2] = false;
@@ -292,8 +292,6 @@ impl Position {
         //flip color
         self.active_color = 1 - self.active_color;
     }
-
-    
 
     pub fn analyze_move(&self, mut move_: Move_) -> Move_ {
         //find out if ep, or castling
