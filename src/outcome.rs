@@ -18,8 +18,8 @@ impl Outcome {
     pub fn score(&self) -> i32 {
         match self {
             Outcome::Undecided(_, material_value) => *material_value,
-            Outcome::WhiteIsMate(_) => -20000,
-            Outcome::BlackIsMate(_) => 20000,
+            Outcome::WhiteIsMate(d) => -20000 + d, // to look for quicker mate
+            Outcome::BlackIsMate(d) => 20000 - d,
             _ => 0
         }
     }
@@ -32,8 +32,8 @@ impl Outcome {
 
         match self {
             Outcome::Undecided(_, material_value) => format!("cp {}", mult * *material_value),
-            Outcome::BlackIsMate(depth) => format!("mate {}", mult * (*depth + 1) / 2), //plies to moves
-            Outcome::WhiteIsMate(depth) => format!("mate {}", - mult * (*depth + 1) / 2), //plies to moves
+            Outcome::BlackIsMate(depth) => format!("mate {}", mult * *depth / 2), //plies to moves
+            Outcome::WhiteIsMate(depth) => format!("mate {}", - mult * *depth / 2), //plies to moves
             _ => "cp 0".to_string()
         }
     }

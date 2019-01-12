@@ -78,6 +78,15 @@ impl Position {
         result
     }
 
+    pub fn get_piece_counts(&self) -> Vec<(PieceType, u32)> {
+        let mut result: Vec<(PieceType, u32)> = Vec::new();
+        for piece_value in 0..12 {
+            let count = self.bit_boards[piece_value as usize].get_count();
+            result.push((PieceType::new(piece_value), count));
+        }
+        result
+    }
+
     pub fn get_piece_board(&self, color: u8) -> BitBoard {
         return 
             self.bit_boards[PieceType::new_pawn(color).to_usize()] |
