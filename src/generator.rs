@@ -84,6 +84,32 @@ impl<'a> Generator<'a> {
         result
     }
 
+    pub fn generate_legal_moves(&self) -> Vec<Move_> {
+        let color = self.position.get_active_color();
+        let mut result: Vec<Move_> = Vec::new();
+
+        for (piece_type, square) in self.position.get_active_color_pieces() {
+            let piece_moves = self.generate_piece_moves(square, piece_type);
+            for piece_move in piece_moves {
+                //check castling
+                if piece_move.is_castling() && !self.is_castling_legal(piece_move) {
+                    continue;
+                }
+
+                let mut pos = self.position.clone();
+                pos.apply_move(piece_move);
+                if Generator::new(&pos).is_check(color) {
+                    continue;
+                }
+                
+                result.push(piece_move);
+            }
+        }
+
+        result
+    }
+
+
     pub fn generate_piece_moves(&self, square: Square, piece_type: PieceType) -> Vec<Move_> {
 
         let pt = piece_type.get_type();

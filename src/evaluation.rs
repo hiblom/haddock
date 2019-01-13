@@ -148,12 +148,12 @@ const PIECE_SQUARE_VALUE: [[i32; 64]; 12] = [
     ]
 ];
 
-pub fn evaluate(position: &Position, depth: i32) -> Outcome {
+pub fn evaluate(position: &Position, depth: i32, do_legal_check: bool) -> Outcome {
     //check status of other king. when check, then the outcome is illegal
     let color = position.get_active_color();
     let other_color = 1 - color;
 
-    if Generator::new(position).is_check(other_color) {
+    if do_legal_check && Generator::new(position).is_check(other_color) {
         return Outcome::Illegal(depth)
     }
 

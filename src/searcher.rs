@@ -66,8 +66,211 @@ impl Searcher {
             _ => (),
         }
 
-        let best_move = self.search_tree(max_depth);
+        let best_move = self.search_tree_2(max_depth);
         println!("bestmove {}", best_move.get_fen());
+    }
+
+    fn search_tree_2(&mut self, max_depth: u64) -> Move_ {
+
+        self.node_count = 0;
+        self.set_times();
+
+        let current_pos = self.base_position.clone();
+
+        struct StackState {
+            position: Position,
+            moves: Vec<Move_>,
+            current_index: usize,
+            score: Option<Outcome>,
+            sub_pv: Option<Vec<Move_>>
+        }
+
+        let mut stack: Vec<StackState> = Vec::new();
+
+        stack.push( StackState { 
+            position: current_pos, 
+            moves: Generator::new(&current_pos).generate_legal_moves(),
+            current_index: 0,
+            score: None,
+            sub_pv: None });
+
+        let mut best_move: Option<Move_> = None;
+
+        for max_iter_depth in 1..(max_depth + 1) as usize {
+            //println!("depth iteration {}", max_iter_depth);
+
+            let mut d: usize = 1;
+            stack[0].current_index = 0;
+            stack[0].score = None;
+            stack[0].sub_pv = None;
+
+            //put best move at top, for alpha/beta
+            match best_move {
+                Some(bm) => {
+                    let i_ = stack[0].moves.iter().position(|&m| m == bm);
+                    match i_ {
+                        Some(i) => {
+                            stack[0].moves.remove(i);
+                            stack[0].moves.insert(0, bm)
+                        },
+                        None => () //??
+                    }
+                },
+                None => ()
+            }
+
+            while !self.must_stop() {
+                //alternatives:
+                //make new node, increase depth
+                //evaluate, decrease depth
+                //next move at current depth, increase depth
+                //out of moves, destroy node, decrease depth
+                
+                if d == max_iter_depth {
+                    //evaluate
+                    let i = d - 1;
+                    let mut pos = stack[i].position.clone();
+                    let color = pos.get_active_color();
+
+                    let move_ = stack[i].moves[stack[i].current_index];
+                    //println!("evaluating {} at depth {}", move_.get_fen(), d);
+                    pos.apply_move(move_);
+
+                    let score = Some(evaluation::evaluate(&pos, d as i32, false));
+                    self.node_count += 1;
+
+                    //look for alpha-beta cutoff opportunities
+                    //compare score with score 2 levels back
+                    //if score is worse, move at level d - 2 is refuted
+
+                    if d > 1 {
+                        if Searcher::is_better_outcome(&stack[d - 2].score, &score, 1 - color) {
+                            //println!("move .. {} {} is refuted", stack[d - 2].moves[stack[d - 2].current_index].get_fen(), move_.get_fen());
+                            stack.pop();
+                            d -= 2;
+                            continue;
+                        }
+                    }
+                    
+                    if Searcher::is_better_outcome(&score, &stack[i].score, color) {
+                        stack[i].score = score;
+                        stack[i].sub_pv = Some(vec![move_]);
+                    }
+                    d -= 1;
+
+                } else {
+                    if stack.len() < d + 1 {
+                        //create new node
+                        let current_pos = stack[d - 1].position;
+                        let mut pos = current_pos.clone();
+                        let move_ = stack[d - 1].moves[stack[d - 1].current_index];
+                        pos.apply_move(move_);
+                        let moves = Generator::new(&pos).generate_legal_moves();
+
+                        if moves.len() == 0 {
+                            //check mate or stale mate
+                            let color = pos.get_active_color();
+                            let score: Option<Outcome>;
+                            if Generator::new(&pos).is_check(color) {
+                                if color == global::COLOR_WHITE {
+                                    score = Some(Outcome::WhiteIsMate(d as i32));
+                                } else {
+                                    score = Some(Outcome::BlackIsMate(d as i32));
+                                }
+                            } else {
+                                score = Some(Outcome::DrawByStalemate(d as i32));
+                            }
+                            if Searcher::is_better_outcome(&score, &stack[d - 1].score, 1 - color) {
+                                stack[d - 1].score = score;
+                                stack[d - 1].sub_pv = Some(vec![move_])
+                            }
+                            d -= 1;
+                        } else {
+                            //self.node_count += moves.len() as u32;
+                            stack.push( StackState { 
+                                position: pos, 
+                                moves: moves,
+                                current_index: 0,
+                                score: None,
+                                sub_pv: None });
+                            d += 1
+                        }
+                    }
+                    else {
+                        //println!("index {}/{}, depth {}", stack[d].current_index, stack[d].moves.len(), d);
+                        let new_index = stack[d].current_index + 1;
+                        if new_index < stack[d].moves.len() {
+                            //next move
+                            stack[d].current_index = new_index;
+                            d += 1;
+                        } else {
+                            //go back a level
+                            if d == 0 {
+                                break;
+                            }
+                            //look for alpha beta cutoff opportunities
+                            if d > 1 {
+                                if Searcher::is_better_outcome(&stack[d - 2].score, &stack[d].score, stack[d - 2].position.get_active_color()) {
+                                    //println!("pruning the tree");
+                                    stack.pop();
+                                    stack.pop();
+                                    d -= 2;
+                                    continue;
+                                }
+                            }
+
+                            //update parent best score
+                            if Searcher::is_better_outcome(&stack[d].score, &stack[d - 1].score, stack[d - 1].position.get_active_color()) {
+                                stack[d - 1].score = stack[d].score;
+                                if let Some(mut child_v) = stack[d].sub_pv.take() {
+                                    let mut parent_v = Vec::new();
+                                    parent_v.push(stack[d - 1].moves[stack[d - 1].current_index]);
+                                    parent_v.append(&mut child_v);
+                                    //println!("new variant {}", Searcher::get_moves_string(&parent_v));
+                                    stack[d - 1].sub_pv = Some(parent_v);
+                                }
+                            }
+
+                            stack.pop();
+                            d -= 1;
+                        }
+                    }
+                }
+            }
+
+            if self.must_stop() {
+                break;
+            }
+
+            if stack[0].score.is_none() || stack[0].sub_pv.is_none() {
+                break;
+            }
+
+            let time = self.get_time_elapsed_ms();
+            let mut nps = self.node_count as u64;
+            if time > 0 {
+                nps = nps * 1000 / time;
+            }
+
+            let uci_score = stack[0].score.unwrap().to_uci_score(current_pos.get_active_color());
+            let pv = stack[0].sub_pv.take().unwrap();
+            let pv_string = Searcher::get_moves_string(&pv);
+
+            println!(
+                "info depth {} score {} time {} nodes {} nps {} pv {}",
+                max_iter_depth, uci_score, time, self.node_count, nps, pv_string
+            );
+            best_move = Some(pv[0]);
+            if stack[0].score.unwrap().end() {
+                break;
+            }
+        }
+
+        match best_move {
+            Some(m) => return m,
+            None => panic!("Best move not found!")
+        }
+
     }
 
     fn search_tree(&mut self, max_depth: u64) -> Move_ {
@@ -249,7 +452,7 @@ impl Searcher {
                 for move_ in &moves {
                     let mut new_pos = position.clone();
                     new_pos.apply_move(*move_);
-                    let outcome = evaluation::evaluate(&new_pos, depth);
+                    let outcome = evaluation::evaluate(&new_pos, depth, true);
 
                     match outcome {
                         Outcome::Illegal(_) => {

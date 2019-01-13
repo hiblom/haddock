@@ -6,9 +6,9 @@ use crate::global;
 pub enum Outcome {
     Illegal(i32),
     Undecided(i32, i32),
-    WhiteIsMate(i32),
-    BlackIsMate(i32),
-    DrawByStalemate(i32),
+    #[allow(dead_code)] WhiteIsMate(i32),
+    #[allow(dead_code)] BlackIsMate(i32),
+    #[allow(dead_code)] DrawByStalemate(i32),
     DrawByHalfmoveclock(i32),
     #[allow(dead_code)] DrawByRepetition(i32),
     #[allow(dead_code)] DrawByInsufficientMaterial(i32)
@@ -32,8 +32,8 @@ impl Outcome {
 
         match self {
             Outcome::Undecided(_, material_value) => format!("cp {}", mult * *material_value),
-            Outcome::BlackIsMate(depth) => format!("mate {}", mult * *depth / 2), //plies to moves
-            Outcome::WhiteIsMate(depth) => format!("mate {}", - mult * *depth / 2), //plies to moves
+            Outcome::BlackIsMate(depth) => format!("mate {}", mult * (*depth + 1) / 2), //plies to moves
+            Outcome::WhiteIsMate(depth) => format!("mate {}", - mult * (*depth + 1) / 2), //plies to moves
             _ => "cp 0".to_string()
         }
     }
