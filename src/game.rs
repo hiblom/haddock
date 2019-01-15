@@ -11,7 +11,7 @@ use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searcher::Searcher;
 use crate::move_::Move_;
-use crate::generator;
+use crate::generator::Generator;
 
 pub struct Game {
     receiver: Receiver<InputCommand>,
@@ -88,7 +88,7 @@ impl<'a> Game {
                 "fen" => {
                     let max_fen_index;
                     match args_parts.iter().position(|&r| r == "moves") {
-                        None => max_fen_index = args_parts.len() + 1,
+                        None => max_fen_index = args_parts.len(),
                         Some(i) => max_fen_index = i
                     }
 
@@ -113,12 +113,13 @@ impl<'a> Game {
                         Some(pos) => {
                             match Move_::from_str(args_parts[i]) {
                                 Some(mv) => {
-                                    let moves = generator::generate_legal_moves(pos);
-                                    if moves.contains(&mv) {
+                                    let mv = pos.analyze_move(mv);
+                                    if Generator::new(pos).is_legal_move(mv) {
                                         pos.apply_move(mv);
                                     }
                                     else {
                                         println!("{} is an illegal move!", &args_parts[i]);
+                                        println!("internal position:\n{}", pos);
                                         return true;  
                                     }
                                 }, 
@@ -133,8 +134,6 @@ impl<'a> Game {
                 }
             i += 1;
         }
-
-        //println!("{}", self.position.unwrap());
 
         true
     }
@@ -266,7 +265,7 @@ impl<'a> Game {
     
         let position_clone: Position;
         
-        match self.position {
+        match &self.position {
             Some(p) => position_clone = p.clone(),
             None => {
                 println!("Cannot setup search without position");

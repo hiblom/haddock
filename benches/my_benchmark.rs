@@ -9,7 +9,7 @@ fn bench_generate_moves(c: &mut Criterion) {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = haddock::parser::parse_fen(&fen_parts).unwrap();
 
-    c.bench_function("generate moves", move |b| b.iter(|| haddock::generator::generate_legal_moves(&position)));
+    c.bench_function("generate moves", move |b| b.iter(|| haddock::generator::Generator::new(&position).generate_moves()));
 }
 
 fn bench_apply_move(c: &mut Criterion) {
@@ -18,6 +18,7 @@ fn bench_apply_move(c: &mut Criterion) {
     let position = haddock::parser::parse_fen(&fen_parts).unwrap();
 
     let move_ = haddock::move_::Move_::from_str("d3g6").unwrap();
+    let move_ = position.analyze_move(move_);
 
     //applying the move includes cloning the position
     c.bench_function("apply move", move |b| b.iter(|| {
@@ -31,7 +32,7 @@ fn bench_evaluate_position(c: &mut Criterion) {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = haddock::parser::parse_fen(&fen_parts).unwrap();
 
-    c.bench_function("evaluate position", move |b| b.iter(|| haddock::evaluation::evaluate(&position)));
+    c.bench_function("evaluate position", move |b| b.iter(|| haddock::evaluation::evaluate(&position, 0)));
 }
 
 
