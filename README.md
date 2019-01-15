@@ -5,7 +5,7 @@ Pre-release 0.1.0 Features
  * Mailbox board representation
  * Iterative deepening / Minimax search strategy
 
-Pre-release 0.2.0 Features
+Pre-release 0.2.1 Features
 * speed benchmarks for move generation and evaluation
 * bitboard internal position and move representation
 * improved evaluation
