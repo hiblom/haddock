@@ -67,7 +67,7 @@ impl Searcher {
         }
 
         let best_move = self.search_tree_2(max_depth);
-        println!("bestmove {}", best_move.get_fen());
+        println!("bestmove {}", best_move.to_fen());
     }
 
     fn search_tree_2(&mut self, max_depth: u64) -> Move_ {
@@ -95,6 +95,9 @@ impl Searcher {
             sub_pv: None });
 
         let mut best_move: Option<Move_> = None;
+        
+        //vector of hashmap to keep the best moves and refutes in, starting at level 1
+        let mut best_moves: Vec<HashMap<Move_, Move_>> = vec![HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()];
 
         for max_iter_depth in 1..(max_depth + 1) as usize {
             //println!("depth iteration {}", max_iter_depth);
@@ -139,22 +142,24 @@ impl Searcher {
                     let score = Some(evaluation::evaluate(&pos, d as i32, false));
                     self.node_count += 1;
 
-                    //look for alpha-beta cutoff opportunities
-                    //compare score with score 2 levels back
-                    //if score is worse, move at level d - 2 is refuted
-
-                    if d > 1 {
-                        if Searcher::is_better_outcome(&stack[d - 2].score, &score, 1 - color) {
-                            //println!("move .. {} {} is refuted", stack[d - 2].moves[stack[d - 2].current_index].get_fen(), move_.get_fen());
-                            stack.pop();
-                            d -= 2;
-                            continue;
-                        }
-                    }
-                    
                     if Searcher::is_better_outcome(&score, &stack[i].score, color) {
                         stack[i].score = score;
                         stack[i].sub_pv = Some(vec![move_]);
+
+                        if d >= 2 && d <= 5 {
+                            best_moves[d - 2].insert(stack[d - 2].moves[stack[d - 2].current_index], move_);
+                        }
+
+                        //look for alpha-beta cutoff opportunities
+                        //compare score with score 2 levels back
+                        //if score is worse, move at level d - 2 is refuted
+                        if d > 1 {
+                            if Searcher::is_better_outcome(&stack[d - 2].score, &score, 1 - color) {
+                                stack.pop();
+                                d -= 2;
+                                continue;
+                            }
+                        }
                     }
                     d -= 1;
 
@@ -165,7 +170,22 @@ impl Searcher {
                         let mut pos = current_pos.clone();
                         let move_ = stack[d - 1].moves[stack[d - 1].current_index];
                         pos.apply_move(move_);
-                        let moves = Generator::new(&pos).generate_legal_moves();
+                        let mut moves = Generator::new(&pos).generate_legal_moves();
+
+                        //sort: best move and refutes from previous iteration go to the top
+                        if d >= 1 && d <= 4 {
+                            if best_moves[d - 1].contains_key(&move_) {
+                                let p_ = moves.iter().position(|&m| m == best_moves[d - 1][&move_]);
+                                match p_ {
+                                    Some(p) => {
+                                        //println!("Putting move {} -> {} at the top", move_.get_fen(), best_moves[&move_].get_fen());
+                                        moves.remove(p);
+                                        moves.insert(0, best_moves[d - 1][&move_]);
+                                    },
+                                    None => ()
+                                }
+                            }
+                        }
 
                         if moves.len() == 0 {
                             //check mate or stale mate
@@ -186,7 +206,6 @@ impl Searcher {
                             }
                             d -= 1;
                         } else {
-                            //self.node_count += moves.len() as u32;
                             stack.push( StackState { 
                                 position: pos, 
                                 moves: moves,
@@ -208,26 +227,32 @@ impl Searcher {
                             if d == 0 {
                                 break;
                             }
-                            //look for alpha beta cutoff opportunities
-                            if d > 1 {
-                                if Searcher::is_better_outcome(&stack[d - 2].score, &stack[d].score, stack[d - 2].position.get_active_color()) {
-                                    //println!("pruning the tree");
-                                    stack.pop();
-                                    stack.pop();
-                                    d -= 2;
-                                    continue;
-                                }
-                            }
 
                             //update parent best score
                             if Searcher::is_better_outcome(&stack[d].score, &stack[d - 1].score, stack[d - 1].position.get_active_color()) {
                                 stack[d - 1].score = stack[d].score;
                                 if let Some(mut child_v) = stack[d].sub_pv.take() {
                                     let mut parent_v = Vec::new();
-                                    parent_v.push(stack[d - 1].moves[stack[d - 1].current_index]);
+                                    let parent_move = stack[d - 1].moves[stack[d - 1].current_index];
+                                    let cv_clone = child_v.clone();
+                                    parent_v.push(parent_move);
                                     parent_v.append(&mut child_v);
-                                    //println!("new variant {}", Searcher::get_moves_string(&parent_v));
                                     stack[d - 1].sub_pv = Some(parent_v);
+
+                                    if (d >= 1 && d <= 4) && cv_clone.len() > 0 {
+                                        //println!("update best moves {} -> {}", parent_move.get_fen(), cv_clone[0].get_fen());
+                                        best_moves[d - 1].insert(parent_move, cv_clone[0]);
+                                    }
+
+                                    //look for alpha beta cutoff opportunities
+                                    if d > 1 {
+                                        if Searcher::is_better_outcome(&stack[d - 2].score, &stack[d].score, stack[d - 2].position.get_active_color()) {
+                                            stack.pop();
+                                            stack.pop();
+                                            d -= 2;
+                                            continue;
+                                        }
+                                    }
                                 }
                             }
 
@@ -237,6 +262,12 @@ impl Searcher {
                     }
                 }
             }
+
+            //let mut hashmap_length = 0;
+            //for hashmap_depth in 0..best_moves.len() {
+            //    hashmap_length += best_moves[hashmap_depth].len();
+            //}
+            //println!("hashmap length: {:?}", hashmap_length);
 
             if self.must_stop() {
                 break;
@@ -273,6 +304,7 @@ impl Searcher {
 
     }
 
+    #[allow(dead_code)]
     fn search_tree(&mut self, max_depth: u64) -> Move_ {
         let current_pos = &self.base_position.clone();
 
@@ -520,7 +552,7 @@ impl Searcher {
             if moves_string.len() > 0 {
                 moves_string.push_str(" ");
             }
-            moves_string.push_str(&mv.get_fen());
+            moves_string.push_str(&mv.to_fen());
         }
         moves_string
     }
