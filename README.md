@@ -5,17 +5,15 @@ Pre-release 0.1.0 Features
  * Mailbox board representation
  * Iterative deepening / Minimax search strategy
 
-Upcoming pre-release
+Pre-release 0.2.0 Features
 * speed benchmarks for move generation and evaluation
-* faster move generation
 * bitboard internal position and move representation
 * improved evaluation
-* move ordering & pruning
+* alpha beta move ordering & pruning
 
 Roadmap
-
+* quiesence search / SEE
 * implement all UCI commands
 * opening books
 * end-game tables
-* hash tables
 * etc...
