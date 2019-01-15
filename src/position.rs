@@ -78,6 +78,7 @@ impl Position {
         result
     }
 
+    #[allow(dead_code)]
     pub fn get_piece_counts(&self) -> Vec<(PieceType, u32)> {
         let mut result: Vec<(PieceType, u32)> = Vec::new();
         for piece_value in 0..12 {

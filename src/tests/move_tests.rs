@@ -4,7 +4,7 @@ pub fn test_get_fen_e2e4() {
     let mv = crate::move_::Move_::new(12 * 256 + 28);
 
     //act
-    let mv_string = crate::move_::Move_::get_fen(mv);
+    let mv_string = crate::move_::Move_::to_fen(mv);
 
     //assert
     assert_eq!("e2e4", mv_string, "Unexpected move string");
@@ -30,7 +30,7 @@ pub fn test_from_to_str_promo() {
 
     //act
     let mv = crate::move_::Move_::from_str(mv_string).unwrap();
-    let mv_str_back = mv.get_fen();
+    let mv_str_back = mv.to_fen();
 
     //assert
     assert_eq!(mv_string, mv_str_back, "Unexpected move from string");

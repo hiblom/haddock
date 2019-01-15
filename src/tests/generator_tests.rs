@@ -71,12 +71,12 @@ fn test_king_moves_corner() {
     //assert
     println!("expected_moves moves:");
     for move_ in expected_moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     println!("generated moves:");
     for move_ in moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
 
@@ -223,12 +223,12 @@ fn test_rook_moves_other_pieces() {
     //assert
     println!("expected_moves moves:");
     for move_ in expected_moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     println!("generated moves:");
     for move_ in moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     assert_eq!(
@@ -268,12 +268,12 @@ fn test_knight_moves_middle() {
     //assert
     println!("expected_moves moves:");
     for move_ in expected_moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     println!("generated moves:");
     for move_ in moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     assert_eq!(
@@ -311,12 +311,12 @@ fn test_knight_moves_corner() {
     //assert
     println!("expected_moves moves:");
     for move_ in expected_moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     println!("generated moves:");
     for move_ in moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     assert_eq!(
@@ -348,12 +348,12 @@ fn test_knight_moves_startpos_b1() {
     //assert
     println!("expected_moves moves:");
     for move_ in expected_moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     println!("generated moves:");
     for move_ in moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     assert_eq!(
@@ -539,12 +539,12 @@ fn test_bishop_moves_other_pieces() {
     //assert
     println!("expected_moves moves:");
     for move_ in expected_moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
     println!("generated moves:");
     for move_ in moves.iter() {
-        println!("{}", crate::move_::Move_::get_fen(*move_));
+        println!("{}", crate::move_::Move_::to_fen(*move_));
     }
 
 

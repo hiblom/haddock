@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::square::Square;
 use crate::piecetype::PieceType;
 
@@ -8,7 +10,7 @@ const MOVE_BIT_EP: u32            = 0b00000000_00000010_00000000_00000000;
 const MOVE_BIT_CASTLING: u32      = 0b00000000_00000100_00000000_00000000;
 const MOVE_MASK_PROMO_PIECE: u32  = 0b11111111_00000000_00000000_00000000;
 
-#[derive(Clone, Copy, Eq, Hash, Debug)]
+#[derive(Clone, Copy, Eq, Hash)]
 pub struct Move_(u32);
 
 impl Move_ {
@@ -60,7 +62,7 @@ impl Move_ {
         Some(Move_(result))
     }
 
-    pub fn get_fen(self) -> String {
+    pub fn to_fen(self) -> String {
         let (sq_from, sq_to) = self.get_squares();
 
         let sq_from_str = sq_from.to_fen();
@@ -139,5 +141,11 @@ impl Move_ {
 impl PartialEq for Move_ {
     fn eq(&self, other: &Move_) -> bool {
         self.0 == other.0
+    }
+}
+
+impl fmt::Debug for Move_ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_fen())
     }
 }

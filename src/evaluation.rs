@@ -9,7 +9,7 @@ const PIECE_VALUE: [i32; 12] = [
     900,-900, //queen
     500,-500, //rook
     300,-300, //bishop
-    300,-300 //knight
+    300,-300  //knight
 ];
 
 

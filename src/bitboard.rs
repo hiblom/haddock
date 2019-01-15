@@ -71,6 +71,7 @@ impl BitBoard {
         Square::new(self.0.trailing_zeros() as u8)
     }
 
+    #[allow(dead_code)]
     pub fn get_count(self) -> u32 {
         self.0.count_ones()
     }
