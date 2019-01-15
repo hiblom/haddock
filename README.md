@@ -16,4 +16,5 @@ Roadmap
 * implement all UCI commands
 * opening books
 * end-game tables
+* multi-threaded search
 * etc...
