@@ -141,15 +141,13 @@ impl Searcher {
                     //println!("evaluating {} at depth {}", move_.get_fen(), d);
                     pos.apply_move(move_);
 
-                    /* not helping lol
                     if pos.was_capture() {
-                        //println!("evaluating capture exchange on pos\n{}", pos);
+                        //println!("evaluating capture exchange after move {} on pos\n{}", move_.to_fen(), pos);
                         let (_, square_to) = move_.get_squares();
                         let gen = Generator::new(&pos);
                         pos = gen.capture_exchange(square_to);
                         //println!("pos after capture exchange:\n{}", pos);
                     }
-                    */
 
                     let score = Some(evaluation::evaluate(&pos, d as i32, false));
                     self.node_count += 1;

@@ -149,6 +149,7 @@ impl Position {
         self.fullmovenumber
     }
 
+    #[allow(dead_code)]
     pub fn was_capture(&self) -> bool {
         self.was_capture
     }

@@ -74,11 +74,10 @@ impl<'a> Generator<'a> {
     }
 
     pub fn generate_moves(&self) -> Vec<Move_> {
-        let mut result: Vec<Move_> = Vec::new();
+        let mut result: Vec<Move_> = Vec::with_capacity(80);
 
         for (piece_type, square) in self.position.get_active_color_pieces() {
-            let mut piece_moves = self.generate_piece_moves(square, piece_type);
-            result.append(&mut piece_moves);
+            self.generate_piece_moves(square, piece_type, &mut result);
         }
 
         result
@@ -86,60 +85,56 @@ impl<'a> Generator<'a> {
 
     pub fn generate_legal_moves(&self) -> Vec<Move_> {
         let color = self.position.get_active_color();
-        let mut result: Vec<Move_> = Vec::new();
+        let mut moves: Vec<Move_> = Vec::with_capacity(80);
+        let mut result: Vec<Move_> = Vec::with_capacity(80);
 
         for (piece_type, square) in self.position.get_active_color_pieces() {
-            let piece_moves = self.generate_piece_moves(square, piece_type);
-            for piece_move in piece_moves {
-                //check castling
-                if piece_move.is_castling() && !self.is_castling_legal(piece_move) {
-                    continue;
-                }
+            self.generate_piece_moves(square, piece_type, &mut moves);
+        }
 
-                let mut pos = self.position.clone();
-                pos.apply_move(piece_move);
-                if Generator::new(&pos).is_check(color) {
-                    continue;
-                }
-                
-                result.push(piece_move);
+        for piece_move in moves {
+            //check castling
+            if piece_move.is_castling() && !self.is_castling_legal(piece_move) {
+                continue;
             }
+
+            let mut pos = self.position.clone();
+            pos.apply_move(piece_move);
+            if Generator::new(&pos).is_check(color) {
+                continue;
+            }
+            
+            result.push(piece_move);
         }
 
         result
     }
 
 
-    pub fn generate_piece_moves(&self, square: Square, piece_type: PieceType) -> Vec<Move_> {
+    pub fn generate_piece_moves(&self, square: Square, piece_type: PieceType, moves: &mut Vec<Move_>) {
 
         let pt = piece_type.get_type();
         match pt {
-            piecetype::PIECE_KING => self.generate_king_moves(square),
-            piecetype::PIECE_QUEEN => self.generate_queen_moves(square),
-            piecetype::PIECE_ROOK => self.generate_rook_moves(square),
-            piecetype::PIECE_BISHOP => self.generate_bishop_moves(square),
-            piecetype::PIECE_KNIGHT => self.generate_moveboard_moves(square, moveboard::MOVEBOARD_KNIGHT),
-            piecetype::PIECE_PAWN => self.generate_pawn_moves(square),
-            _ => Vec::new()
+            piecetype::PIECE_KING => self.generate_king_moves(square, moves),
+            piecetype::PIECE_QUEEN => self.generate_queen_moves(square, moves),
+            piecetype::PIECE_ROOK => self.generate_rook_moves(square, moves),
+            piecetype::PIECE_BISHOP => self.generate_bishop_moves(square, moves),
+            piecetype::PIECE_KNIGHT => self.generate_moveboard_moves(square, moveboard::MOVEBOARD_KNIGHT, moves),
+            piecetype::PIECE_PAWN => self.generate_pawn_moves(square, moves),
+            _ => ()
         }
     }
 
-     fn generate_moveboard_moves(&self, current_square: Square, mb: usize) -> Vec<Move_> {
-        let mut result: Vec<Move_> = Vec::new();
-
+     fn generate_moveboard_moves(&self, current_square: Square, mb: usize, moves: &mut Vec<Move_>) {
         let mut move_board = moveboard::get_move_board(mb, current_square);
         move_board &= !self.own_piece_board; //exclude moves to pieces of same color
 
         for sq in move_board.get_squares() {
-            result.push(Move_::from_squares(current_square, sq));
+            moves.push(Move_::from_squares(current_square, sq));
         }
-        
-        result
     }
 
-    fn generate_rook_moves(&self, current_square: Square) -> Vec<Move_> {
-        let mut result: Vec<Move_> = Vec::new();
-
+    fn generate_rook_moves(&self, current_square: Square, moves: &mut Vec<Move_>) {
         let mut move_board = BitBoard::new();
         move_board |= self.generate_move_board(moveboard::DIR_UP, current_square, BitBoard::get_lowest_square);
         move_board |= self.generate_move_board(moveboard::DIR_RIGHT, current_square, BitBoard::get_lowest_square);
@@ -147,15 +142,11 @@ impl<'a> Generator<'a> {
         move_board |= self.generate_move_board(moveboard::DIR_LEFT, current_square, BitBoard::get_highest_square);
         
         for sq in move_board.get_squares() {
-            result.push(Move_::from_squares(current_square, sq));
+            moves.push(Move_::from_squares(current_square, sq));
         }
-
-        result
     }
 
-    fn generate_bishop_moves(&self, current_square: Square) -> Vec<Move_> {
-        let mut result: Vec<Move_> = Vec::new();
-
+    fn generate_bishop_moves(&self, current_square: Square, moves: &mut Vec<Move_>) {
         let mut move_board = BitBoard::new();
         move_board |= self.generate_move_board(moveboard::DIR_UP_RIGHT, current_square, BitBoard::get_lowest_square);
         move_board |= self.generate_move_board(moveboard::DIR_DOWN_RIGHT, current_square, BitBoard::get_highest_square);
@@ -163,15 +154,11 @@ impl<'a> Generator<'a> {
         move_board |= self.generate_move_board(moveboard::DIR_UP_LEFT, current_square, BitBoard::get_lowest_square);
 
         for sq in move_board.get_squares() {
-            result.push(Move_::from_squares(current_square, sq));
+            moves.push(Move_::from_squares(current_square, sq));
         }
-
-        result
     }
 
-    fn generate_queen_moves(&self, current_square: Square) -> Vec<Move_> {
-        let mut result: Vec<Move_> = Vec::new();
-
+    fn generate_queen_moves(&self, current_square: Square, moves: &mut Vec<Move_>) {
         let mut move_board = BitBoard::new();
         move_board |= self.generate_move_board(moveboard::DIR_UP, current_square, BitBoard::get_lowest_square);
         move_board |= self.generate_move_board(moveboard::DIR_RIGHT, current_square, BitBoard::get_lowest_square);
@@ -183,10 +170,8 @@ impl<'a> Generator<'a> {
         move_board |= self.generate_move_board(moveboard::DIR_UP_LEFT, current_square, BitBoard::get_lowest_square);
 
         for sq in move_board.get_squares() {
-            result.push(Move_::from_squares(current_square, sq));
+            moves.push(Move_::from_squares(current_square, sq));
         }
-
-        result
     }
 
 
@@ -205,8 +190,8 @@ impl<'a> Generator<'a> {
         move_board
     }
 
-    pub fn generate_king_moves(&self, current_square: Square) -> Vec<Move_> {
-        let mut result = self.generate_moveboard_moves(current_square, moveboard::MOVEBOARD_KING);
+    pub fn generate_king_moves(&self, current_square: Square, moves: &mut Vec<Move_>) {
+        self.generate_moveboard_moves(current_square, moveboard::MOVEBOARD_KING, moves);
 
         let color = self.position.get_active_color();
         //castling
@@ -217,7 +202,7 @@ impl<'a> Generator<'a> {
                     self.position.get_piece(square::G1).is_none() {
                         let mut mv = Move_::from_squares(square::E1, square::G1);
                         mv.set_castling(true);
-                        result.push(mv);
+                        moves.push(mv);
                 }
             }
             if self.position.get_castling_status(1) {
@@ -227,7 +212,7 @@ impl<'a> Generator<'a> {
                     self.position.get_piece(square::D1).is_none() {
                         let mut mv = Move_::from_squares(square::E1, square::C1);
                         mv.set_castling(true);
-                        result.push(mv);
+                        moves.push(mv);
                 }
             }
         }
@@ -238,7 +223,7 @@ impl<'a> Generator<'a> {
                     self.position.get_piece(square::G8).is_none() {
                         let mut mv = Move_::from_squares(square::E8, square::G8);
                         mv.set_castling(true);
-                        result.push(mv);
+                        moves.push(mv);
                 }
             }
             if self.position.get_castling_status(3) {
@@ -248,17 +233,14 @@ impl<'a> Generator<'a> {
                     self.position.get_piece(square::D8).is_none() {
                         let mut mv = Move_::from_squares(square::E8, square::C8);
                         mv.set_castling(true);
-                        result.push(mv);
+                        moves.push(mv);
                 }
             }
         }
-
-        result
     }
 
-    pub fn generate_pawn_moves(&self, current_square: Square) -> Vec<Move_> {
+    pub fn generate_pawn_moves(&self, current_square: Square, moves: &mut Vec<Move_>) {
         let color = self.position.get_active_color();
-        let mut moves: Vec<Move_> = Vec::new();
 
         let mut move_board = moveboard::get_move_board(PAWN_PUSH_MOVEBOARD[color as usize], current_square);
         move_board &= !self.all_piece_board; //exclude moves to occupied squares
@@ -268,7 +250,19 @@ impl<'a> Generator<'a> {
         move_board |= cap_board & self.opp_piece_board; //only include captures
         
         for sq in move_board.get_squares() {
-            moves.push(Move_::from_squares(current_square, sq));
+            //check for promotion
+            let m = Move_::from_squares(current_square, sq);
+            let (_, y_to) = sq.to_xy();
+
+            if (color == COLOR_WHITE && y_to == 7) || (color == COLOR_BLACK && y_to == 0) {
+                moves.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
+            }
+            else {
+                moves.push(m);
+            }
         }
         
         let (_, current_y) = current_square.to_xy();
@@ -303,24 +297,6 @@ impl<'a> Generator<'a> {
                 }
             }
         }
-
-        //promotion
-        let mut result: Vec<Move_> = Vec::new();
-
-        for m in moves {
-            let (_, sq_to) = Move_::get_squares(m);
-            let (_, y_to) = sq_to.to_xy();
-            if (color == COLOR_WHITE && y_to == 7) || (color == COLOR_BLACK && y_to == 0) {
-                result.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
-                result.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
-                result.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
-                result.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
-            }
-            else {
-                result.push(m);
-            }
-        }
-        result
     }
 
     pub fn is_check(&self, color: u8) -> bool {
@@ -336,7 +312,7 @@ impl<'a> Generator<'a> {
         let bb = self.position.get_bit_board(PieceType::new_pawn(other_color));
         let pb = mb & bb;
         if pb.not_empty() {
-            Some((PieceType::new_pawn(other_color), pb.get_square()));
+            return Some((PieceType::new_pawn(other_color), pb.get_square()));
         }
 
         //todo EP
@@ -346,7 +322,7 @@ impl<'a> Generator<'a> {
         let bb = self.position.get_bit_board(PieceType::new_knight(other_color));
         let pb = mb & bb;
         if pb.not_empty() {
-            Some((PieceType::new_knight(other_color), pb.get_square()));
+            return Some((PieceType::new_knight(other_color), pb.get_square()));
         }
 
         //bishop?
@@ -387,7 +363,7 @@ impl<'a> Generator<'a> {
         let bb = self.position.get_bit_board(PieceType::new_king(other_color));
         let pb = mb & bb;
         if pb.not_empty() {
-            Some((PieceType::new_king(other_color), pb.get_square()));
+            return Some((PieceType::new_king(other_color), pb.get_square()));
         }
 
         None
@@ -431,6 +407,7 @@ impl<'a> Generator<'a> {
                 Some((_, attacking_sq)) => {
                     //println!("active color: {}, square: {}, pos:\n{}", pos.get_active_color(), attacking_sq.to_fen(), pos);
                     let mut move_ = Move_::from_squares(attacking_sq, square);
+                    //TODO promotion
                     move_ = pos.analyze_move(move_);
                     pos.apply_move(move_);
                 },
