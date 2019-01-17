@@ -97,7 +97,9 @@ impl Searcher {
         let mut best_move: Option<Move_> = None;
         
         //vector of hashmap to keep the best moves and refutes in, starting at level 1
-        let mut best_moves: Vec<HashMap<Move_, Move_>> = vec![HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()];
+        let mut best_moves: Vec<HashMap<Move_, Move_>> = vec![
+            HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(),
+            HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()];
 
         for max_iter_depth in 1..(max_depth + 1) as usize {
             //println!("depth iteration {}", max_iter_depth);
@@ -139,6 +141,16 @@ impl Searcher {
                     //println!("evaluating {} at depth {}", move_.get_fen(), d);
                     pos.apply_move(move_);
 
+                    /* not helping lol
+                    if pos.was_capture() {
+                        //println!("evaluating capture exchange on pos\n{}", pos);
+                        let (_, square_to) = move_.get_squares();
+                        let gen = Generator::new(&pos);
+                        pos = gen.capture_exchange(square_to);
+                        //println!("pos after capture exchange:\n{}", pos);
+                    }
+                    */
+
                     let score = Some(evaluation::evaluate(&pos, d as i32, false));
                     self.node_count += 1;
 
@@ -146,7 +158,7 @@ impl Searcher {
                         stack[i].score = score;
                         stack[i].sub_pv = Some(vec![move_]);
 
-                        if d >= 2 && d <= 5 {
+                        if d >= 2 && d <= 11 {
                             best_moves[d - 2].insert(stack[d - 2].moves[stack[d - 2].current_index], move_);
                         }
 
@@ -173,7 +185,7 @@ impl Searcher {
                         let mut moves = Generator::new(&pos).generate_legal_moves();
 
                         //sort: best move and refutes from previous iteration go to the top
-                        if d >= 1 && d <= 4 {
+                        if d >= 1 && d <= 10 {
                             if best_moves[d - 1].contains_key(&move_) {
                                 let p_ = moves.iter().position(|&m| m == best_moves[d - 1][&move_]);
                                 match p_ {
@@ -239,7 +251,7 @@ impl Searcher {
                                     parent_v.append(&mut child_v);
                                     stack[d - 1].sub_pv = Some(parent_v);
 
-                                    if (d >= 1 && d <= 4) && cv_clone.len() > 0 {
+                                    if (d >= 1 && d <= 10) && cv_clone.len() > 0 {
                                         //println!("update best moves {} -> {}", parent_move.get_fen(), cv_clone[0].get_fen());
                                         best_moves[d - 1].insert(parent_move, cv_clone[0]);
                                     }

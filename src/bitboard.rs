@@ -8,8 +8,12 @@ use std::fmt;
 
 use crate::square::Square;
 
-const LEFT_SIDE: u64 = 0x0101010101010101;
-const RIGHT_SIDE: u64 = 0x8080808080808080;
+const A_FILE: u64 = 0x0101010101010101;
+const H_FILE: u64 = 0x8080808080808080;
+const LS_BIT: u64 = 0x0000000000000001;
+const MS_BIT: u64 = 0x8000000000000000;
+
+
 
 #[derive(Clone, Copy, Eq, Hash)]
 pub struct BitBoard(u64);
@@ -50,12 +54,24 @@ impl BitBoard {
     }
 
     pub fn left(&mut self) -> Self {
-        self.0 = (self.0 >> 1) & !RIGHT_SIDE;
+        self.0 = (self.0 >> 1) & !H_FILE;
         *self
     }
 
     pub fn right(&mut self) -> Self {
-        self.0 = (self.0 << 1) & !LEFT_SIDE;
+        self.0 = (self.0 << 1) & !A_FILE;
+        *self
+    }
+
+    pub fn keep_lowest(&mut self) -> Self {
+        //rotate is to prevent overflow
+        self.0 = self.0 & (LS_BIT.rotate_left(self.0.trailing_zeros()));
+        *self
+    }
+
+    pub fn keep_highest(&mut self) -> Self {
+        //rotate is to prevent overflow
+        self.0 = self.0 & (MS_BIT.rotate_right(self.0.leading_zeros()));
         *self
     }
 

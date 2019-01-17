@@ -17,7 +17,8 @@ pub struct Position {
     castling_status: [bool; 4],
     enpassant_square: Option<Square>,
     halfmoveclock: u32,
-    fullmovenumber: u32
+    fullmovenumber: u32,
+    was_capture: bool
 }
 
 impl Position {
@@ -28,7 +29,8 @@ impl Position {
             castling_status: [true; 4],
             enpassant_square: None,
             halfmoveclock: 0,
-            fullmovenumber: 0
+            fullmovenumber: 0,
+            was_capture: false
         }
     }
 
@@ -147,6 +149,10 @@ impl Position {
         self.fullmovenumber
     }
 
+    pub fn was_capture(&self) -> bool {
+        self.was_capture
+    }
+
     fn apply_simple_move(&mut self, square_from: Square, square_to: Square, piece_type: PieceType) {
         self.set_piece(square_to, piece_type);
         self.remove_piece(square_from, piece_type);
@@ -154,6 +160,7 @@ impl Position {
 
     pub fn apply_move(&mut self, move_: Move_) {
         let (square_from, square_to) = move_.get_squares();
+        self.was_capture = false;
 
         //let piece_index_from = self.board[square_from.to_usize()];
         let piece;
@@ -162,10 +169,9 @@ impl Position {
             None => panic!("No piece found at square {}", square_from.to_fen())
         }
 
-        let mut capture = false;
         match self.get_piece(square_to) {
             Some(p) => {
-                capture = true;
+                self.was_capture = true;
                 self.remove_piece(square_to, p);
             },
             None => ()
@@ -180,7 +186,7 @@ impl Position {
             let (_, y_cap) = square_from.to_xy(); // captured pawn has same rank as capturing pawn start pos
             
             self.remove_piece(Square::from_xy(x_cap, y_cap), PieceType::new_pawn(1 - self.active_color));
-            capture = true;
+            self.was_capture = true;
         }
 
         //promo piece only has type info, not color info
@@ -288,7 +294,7 @@ impl Position {
         }
 
         //reset halfmove clock when pawn moves, or when there was a capture, otherwise increase
-        if capture || piece.is_pawn() {
+        if self.was_capture || piece.is_pawn() {
             self.halfmoveclock = 0;
         } else {
             self.halfmoveclock += 1;

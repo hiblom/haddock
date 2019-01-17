@@ -328,6 +328,71 @@ impl<'a> Generator<'a> {
         return self.is_square_attacked(s, color);
     }
 
+    pub fn find_lowest_attacker(&self, square: Square, color: u8) -> Option<(PieceType, Square)> {
+        let other_color = 1 - color;
+
+        //pawn? use own color pawn capture board to intersect with opp pawns
+        let mb = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], square);
+        let bb = self.position.get_bit_board(PieceType::new_pawn(other_color));
+        let pb = mb & bb;
+        if pb.not_empty() {
+            Some((PieceType::new_pawn(other_color), pb.get_square()));
+        }
+
+        //todo EP
+
+        //knight? same trick, pretend we're a knight
+        let mb = moveboard::get_move_board(moveboard::MOVEBOARD_KNIGHT, square);
+        let bb = self.position.get_bit_board(PieceType::new_knight(other_color));
+        let pb = mb & bb;
+        if pb.not_empty() {
+            Some((PieceType::new_knight(other_color), pb.get_square()));
+        }
+
+        //bishop?
+        let p = PieceType::new_bishop(other_color);
+        match self.find_specific_diagonal_attacker(square, p) {
+            Some(sq) => {
+                return Some((p, sq));
+            },
+            None => ()
+        }
+        
+        //rook?
+        let p = PieceType::new_rook(other_color);
+        match self.find_specific_orthogonal_attacker(square, p) {
+            Some(sq) => {
+                return Some((p, sq));
+            },
+            None => ()
+        }
+        
+        //queen?
+        let p = PieceType::new_queen(other_color);
+        match self.find_specific_orthogonal_attacker(square, p) {
+            Some(sq) => {
+                return Some((p, sq));
+            },
+            None => ()
+        }
+        match self.find_specific_diagonal_attacker(square, p) {
+            Some(sq) => {
+                return Some((p, sq));
+            },
+            None => ()
+        }
+
+        //king?
+        let mb = moveboard::get_move_board(moveboard::MOVEBOARD_KING, square);
+        let bb = self.position.get_bit_board(PieceType::new_king(other_color));
+        let pb = mb & bb;
+        if pb.not_empty() {
+            Some((PieceType::new_king(other_color), pb.get_square()));
+        }
+
+        None
+    }
+
     pub fn is_square_attacked(&self, square: Square, color: u8) -> bool {
         let other_color = 1 - color;
 
@@ -354,41 +419,94 @@ impl<'a> Generator<'a> {
 
         //sliding piece attacks
         return
-            self.find_orthogonal_attacker(moveboard::DIR_UP, square, BitBoard::get_lowest_square, other_color) ||
-            self.find_orthogonal_attacker(moveboard::DIR_RIGHT, square, BitBoard::get_lowest_square, other_color) ||
-            self.find_orthogonal_attacker(moveboard::DIR_DOWN, square, BitBoard::get_highest_square, other_color) ||
-            self.find_orthogonal_attacker(moveboard::DIR_LEFT, square, BitBoard::get_highest_square, other_color) ||
-            self.find_diagonal_attacker(moveboard::DIR_UP_RIGHT, square, BitBoard::get_lowest_square, other_color) ||
-            self.find_diagonal_attacker(moveboard::DIR_DOWN_RIGHT, square, BitBoard::get_highest_square, other_color) ||
-            self.find_diagonal_attacker(moveboard::DIR_DOWN_LEFT, square, BitBoard::get_highest_square, other_color) ||
-            self.find_diagonal_attacker(moveboard::DIR_UP_LEFT, square, BitBoard::get_lowest_square, other_color);
+            self.find_some_orthogonal_attacker(square, other_color) ||
+            self.find_some_diagonal_attacker(square, other_color);
     }
 
-    fn find_orthogonal_attacker(&self, direction: usize, square: Square, get_nearest: fn(BitBoard) -> Square, other_color: u8) -> bool {
-        let forward_ray_board = moveboard::get_ray_board(direction, square);
-        let inter = forward_ray_board & self.all_piece_board;
-        if inter.not_empty() {
-            let nearest_square = get_nearest(inter);
-            let bb = 
-                self.position.get_bit_board(PieceType::new_queen(other_color)) | 
-                self.position.get_bit_board(PieceType::new_rook(other_color));
-            
-            return (BitBoard::from_square(nearest_square) & bb).not_empty();
+    pub fn capture_exchange(&self, square: Square) -> Position {
+        let mut pos = self.position.clone();
+        loop {
+            let gen = Generator::new(&pos);
+            match gen.find_lowest_attacker(square, 1 - pos.get_active_color()) {
+                Some((_, attacking_sq)) => {
+                    //println!("active color: {}, square: {}, pos:\n{}", pos.get_active_color(), attacking_sq.to_fen(), pos);
+                    let mut move_ = Move_::from_squares(attacking_sq, square);
+                    move_ = pos.analyze_move(move_);
+                    pos.apply_move(move_);
+                },
+                None => break
+            }
         }
-        false
+        pos
     }
 
-    fn find_diagonal_attacker(&self, direction: usize, square: Square, get_nearest: fn(BitBoard) -> Square, other_color: u8) -> bool {
-        let forward_ray_board = moveboard::get_ray_board(direction, square);
-        let inter = forward_ray_board & self.all_piece_board;
-        if inter.not_empty() {
-            let nearest_square = get_nearest(inter);
-            let bb = 
-                self.position.get_bit_board(PieceType::new_queen(other_color)) | 
-                self.position.get_bit_board(PieceType::new_bishop(other_color));
+    fn find_some_orthogonal_attacker(&self, square: Square, other_color: u8) -> bool {
+        let inter = self.get_orthoganal_ray_intersect(square);
+
+        let bb = 
+            self.position.get_bit_board(PieceType::new_queen(other_color)) | 
+            self.position.get_bit_board(PieceType::new_rook(other_color));
             
-            return (BitBoard::from_square(nearest_square) & bb).not_empty();
+        return (inter & bb).not_empty();
+    }
+
+    fn find_specific_orthogonal_attacker(&self, square: Square, piece: PieceType) -> Option<Square> {
+        let inter = self.get_orthoganal_ray_intersect(square);
+        let pb = self.position.get_bit_board(piece) & inter;
+        if pb.not_empty() {
+            return Some(pb.get_square());
         }
-        false
+        None
+    }
+
+    fn get_orthoganal_ray_intersect(&self, square: Square) -> BitBoard {
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_UP, square);
+        let mut inter = (ray_board & self.all_piece_board).keep_lowest();
+        
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_RIGHT, square);
+        inter |= (ray_board & self.all_piece_board).keep_lowest();
+
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_DOWN, square);
+        inter |= (ray_board & self.all_piece_board).keep_highest();
+
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_LEFT, square);
+        inter |= (ray_board & self.all_piece_board).keep_highest();
+
+        inter
+    }
+
+    fn find_some_diagonal_attacker(&self, square: Square, other_color: u8) -> bool {
+        let inter = self.get_diagonal_ray_intersect(square);
+
+        let bb = 
+            self.position.get_bit_board(PieceType::new_queen(other_color)) | 
+            self.position.get_bit_board(PieceType::new_bishop(other_color));
+        
+        return (inter & bb).not_empty();
+    }
+
+    fn find_specific_diagonal_attacker(&self, square: Square, piece: PieceType) -> Option<Square> {
+        let inter = self.get_diagonal_ray_intersect(square);
+        let pb = self.position.get_bit_board(piece) & inter;
+        if pb.not_empty() {
+            return Some(pb.get_square());
+        }
+        None
+    }
+
+    fn get_diagonal_ray_intersect(&self, square: Square) -> BitBoard {
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_UP_RIGHT, square);
+        let mut inter = (ray_board & self.all_piece_board).keep_lowest();
+        
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_DOWN_RIGHT, square);
+        inter |= (ray_board & self.all_piece_board).keep_highest();
+
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_DOWN_LEFT, square);
+        inter |= (ray_board & self.all_piece_board).keep_highest();
+
+        let ray_board = moveboard::get_ray_board(moveboard::DIR_UP_LEFT, square);
+        inter |= (ray_board & self.all_piece_board).keep_lowest();
+
+        inter
     }
 }
