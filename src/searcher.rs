@@ -180,6 +180,8 @@ impl Searcher {
                         let mut pos = current_pos.clone();
                         let move_ = stack[d - 1].moves[stack[d - 1].current_index];
                         pos.apply_move(move_);
+                        
+
                         let mut moves = Generator::new(&pos).generate_legal_moves();
 
                         //sort: best move and refutes from previous iteration go to the top
@@ -381,12 +383,12 @@ impl Searcher {
 
         let mut turn_duration = 0;
         match self.search_type {
-            Some(SearchType::CTime(wtime, btime, _, _)) => {
+            Some(SearchType::CTime(wtime, btime, _, _, movestogo)) => {
                 if self.base_position.get_active_color() == global::COLOR_WHITE && wtime > 0 {
-                    turn_duration = self.get_turn_duration(wtime);
+                    turn_duration = self.get_turn_duration(wtime, movestogo);
                 } else if self.base_position.get_active_color() == global::COLOR_BLACK && btime > 0
                 {
-                    turn_duration = self.get_turn_duration(btime);
+                    turn_duration = self.get_turn_duration(btime, movestogo);
                 }
             }
             Some(SearchType::MoveTime(move_time)) => {
@@ -415,18 +417,21 @@ impl Searcher {
         }
     }
 
-    fn get_turn_duration(&self, total_time_left: u64) -> u64 {
-        //TODO better time management
-        //assume game is 50 turns
-        if self.base_position.get_fullmovenumber() < 50 {
-            let turn_duration =
-                total_time_left / (50 - self.base_position.get_fullmovenumber() as u64);
-            println!("Haddock is thinking for {} ms", turn_duration);
-            turn_duration
+    fn get_turn_duration(&self, total_time_left: u64, movestogo: u64) -> u64 {
+        let result;
+        if movestogo > 0 {
+            result = (total_time_left / movestogo) * 99 / 100; //to be on the safe side, take 99%
         } else {
-            //i don't know, how about 1000 ms
-            1000
+            if self.base_position.get_fullmovenumber() < 40 {
+                result = total_time_left / (50 - self.base_position.get_fullmovenumber() as u64);
+            } else {
+                //from move 40 onward, we have less and less time
+                result = total_time_left / 20;
+            }
         }
+
+        println!("Haddock will think for {} ms", result);
+        result
     }
 
     fn must_stop(&self) -> bool {

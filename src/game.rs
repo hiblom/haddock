@@ -179,10 +179,10 @@ impl<'a> Game {
                     if !succeeded {
                         return true;
                     }
-                    if let SearchType::CTime(ref mut wtime, _, _, _) = search_type {
+                    if let SearchType::CTime(ref mut wtime, _, _, _, _) = search_type {
                         *wtime = value;
                     } else {
-                        search_type = SearchType::CTime(value, 0, 0, 0);
+                        search_type = SearchType::CTime(value, 0, 0, 0, 0);
                     }
                 },
                 "btime" => {
@@ -191,10 +191,10 @@ impl<'a> Game {
                     if !succeeded {
                         return true;
                     }
-                    if let SearchType::CTime(_, ref mut btime, _, _) = search_type {
+                    if let SearchType::CTime(_, ref mut btime, _, _, _) = search_type {
                         *btime = value;
                     } else {
-                        search_type = SearchType::CTime(0, value, 0, 0);
+                        search_type = SearchType::CTime(0, value, 0, 0, 0);
                     }
                 },
                 "winc" => {
@@ -203,10 +203,10 @@ impl<'a> Game {
                     if !succeeded {
                         return true;
                     }
-                    if let SearchType::CTime(_, _, ref mut winc, _) = search_type {
+                    if let SearchType::CTime(_, _, ref mut winc, _, _) = search_type {
                         *winc = value;
                     } else {
-                        search_type = SearchType::CTime(0, 0, value, 0);
+                        search_type = SearchType::CTime(0, 0, value, 0, 0);
                     }
                 },
                 "binc" => {
@@ -215,10 +215,22 @@ impl<'a> Game {
                     if !succeeded {
                         return true;
                     }
-                    if let SearchType::CTime(_, _, _, ref mut binc) = search_type {
+                    if let SearchType::CTime(_, _, _, ref mut binc, _) = search_type {
                         *binc = value;
                     } else {
-                        search_type = SearchType::CTime(0, 0, 0, value);
+                        search_type = SearchType::CTime(0, 0, 0, value, 0);
+                    }
+                },
+                "movestogo" => {
+                    i += 1;
+                    let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
+                    if !succeeded {
+                        return true;
+                    }
+                    if let SearchType::CTime(_, _, _, _, ref mut movestogo) = search_type {
+                        *movestogo = value;
+                    } else {
+                        search_type = SearchType::CTime(0, 0, 0, 0, value);
                     }
                 },
                 _ => ()
