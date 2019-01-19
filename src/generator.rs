@@ -73,6 +73,23 @@ impl<'a> Generator<'a> {
         false //should never happen
     }
 
+    pub fn apply_pseudo_legal_move(&self, move_: Move_) -> Option<Position> {
+        let color = self.position.get_active_color();
+
+        //check castling
+        if move_.is_castling() && !self.is_castling_legal(move_) {
+            return None;
+        }
+
+        let mut pos = self.position.clone();
+        pos.apply_move(move_);
+        if Generator::new(&pos).is_check(color) {
+            return None;
+        }
+
+        Some(pos)
+    }
+
     pub fn generate_moves(&self) -> Vec<Move_> {
         let mut result: Vec<Move_> = Vec::with_capacity(80);
 
