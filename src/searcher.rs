@@ -134,7 +134,6 @@ impl Searcher {
 
                 //(check/stale)mate
                 if stack[d].score.is_none() {
-                    //println!("found mate");
                     //check mate or stale mate
                     let color = stack[d].position.get_active_color();
                     //let score: Option<Outcome>;
@@ -312,32 +311,54 @@ impl Searcher {
         let pos = stack[depth].position;
         let color = pos.get_active_color();
         let generator = Generator::new(&pos);
-        
+
+        //examine "null move"
+        if depth > 3 {
+            let score = Some(evaluation::evaluate(&pos, depth as i32));
+            if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
+                stack[depth].score = score;
+                stack[depth].sub_pv = Some(Vec::new());
+
+                //cutoff
+                if depth > 0 {
+                    let parent_depth = depth - 1;
+                    if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
+                        //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
+                        stack.pop();
+                        return parent_depth;
+                    }
+                }
+            }
+        }
+
         let len = stack[depth].moves.len();
         for i in 0..len {
             let mv = stack[depth].moves[i];
+            
             if let Some(mut child_pos) = generator.apply_pseudo_legal_move(mv) {
-                
-                if child_pos.was_capture() {
+                self.node_count += 1;
+                if mv.is_capture() {
                     let (_, square_to) = mv.get_squares();
                     child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+                } else if depth > 3 {
+                    //do not examine silent moves after depth 3
+                    continue;
                 }
 
                 let score = Some(evaluation::evaluate(&child_pos, depth as i32));
-                self.node_count += 1;
 
                 if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
                     stack[depth].score = score;
                     stack[depth].sub_pv = Some(vec![mv]);
 
-                    let parent_depth = depth - 1;
-
                     if depth >= 1 && depth <= 10 {
+                        let parent_depth = depth - 1;
                         best_moves[parent_depth].insert(stack[parent_depth].moves[stack[parent_depth].current_index], mv);
                     }
 
                     //cutoff
                     if depth > 0 {
+                        let parent_depth = depth - 1;
                         if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
                             //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
                             stack.pop();
@@ -385,25 +406,29 @@ impl Searcher {
         let parent_depth = depth - 1;
         if Searcher::is_better_outcome(&stack[depth].score, &stack[parent_depth].score, stack[parent_depth].position.get_active_color()) {
             stack[parent_depth].score = stack[depth].score;
+            
+            let mut parent_v = Vec::new();
+            let parent_move = stack[parent_depth].moves[stack[parent_depth].current_index];
+            parent_v.push(parent_move);
+            let mut child_mv: Option<Move_> = None;
             if let Some(mut child_v) = stack[depth].sub_pv.take() {
-                let mut parent_v = Vec::new();
-                let parent_move = stack[parent_depth].moves[stack[parent_depth].current_index];
-                let cv_clone = child_v.clone();
-                parent_v.push(parent_move);
-                parent_v.append(&mut child_v);
-                stack[parent_depth].sub_pv = Some(parent_v);
-
-                if (depth >= 1 && depth <= 10) && cv_clone.len() > 0 {
-                    best_moves[parent_depth].insert(parent_move, cv_clone[0]);
+                if child_v.len() > 0 {
+                    child_mv = Some(child_v[0]);
                 }
+                parent_v.append(&mut child_v);
+            }
+            stack[parent_depth].sub_pv = Some(parent_v);
 
-                //look for alpha beta cutoff opportunities
-                if depth > 1 {
-                    if Searcher::is_better_outcome(&stack[depth - 2].score, &stack[depth].score, stack[depth - 2].position.get_active_color()) {
-                        stack.pop();
-                        stack.pop();
-                        return depth - 2;
-                    }
+            if (depth >= 1 && depth <= 10) && child_mv.is_some() {
+                best_moves[parent_depth].insert(parent_move, child_mv.unwrap());
+            }
+
+            //look for alpha beta cutoff opportunities
+            if depth > 1 {
+                if Searcher::is_better_outcome(&stack[depth - 2].score, &stack[depth].score, stack[depth - 2].position.get_active_color()) {
+                    stack.pop();
+                    stack.pop();
+                    return depth - 2;
                 }
             }
         }

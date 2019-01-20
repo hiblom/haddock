@@ -18,7 +18,8 @@ pub struct Position {
     enpassant_square: Option<Square>,
     halfmoveclock: u32,
     fullmovenumber: u32,
-    was_capture: bool
+    last_plies: [Option<Move_>; 12],
+    ply_index: usize
 }
 
 impl Position {
@@ -30,7 +31,8 @@ impl Position {
             enpassant_square: None,
             halfmoveclock: 0,
             fullmovenumber: 0,
-            was_capture: false
+            last_plies: [None, None, None, None, None, None, None, None, None, None, None, None],
+            ply_index: 11
         }
     }
 
@@ -149,9 +151,16 @@ impl Position {
         self.fullmovenumber
     }
 
-    #[allow(dead_code)]
-    pub fn was_capture(&self) -> bool {
-        self.was_capture
+    pub fn is_two_fold_repetition(&self) -> bool {
+        return 
+            self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 4) % 12];
+    }
+    
+    pub fn is_three_fold_repetition(&self) -> bool {
+        //last added move was also added 2 more times
+        return 
+            self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 4) % 12] &&
+            self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 8) % 12];
     }
 
     fn apply_simple_move(&mut self, square_from: Square, square_to: Square, piece_type: PieceType) {
@@ -161,7 +170,6 @@ impl Position {
 
     pub fn apply_move(&mut self, move_: Move_) {
         let (square_from, square_to) = move_.get_squares();
-        self.was_capture = false;
 
         //let piece_index_from = self.board[square_from.to_usize()];
         let piece;
@@ -170,12 +178,13 @@ impl Position {
             None => panic!("No piece found at square {}", square_from.to_fen())
         }
 
-        match self.get_piece(square_to) {
-            Some(p) => {
-                self.was_capture = true;
-                self.remove_piece(square_to, p);
-            },
-            None => ()
+        if move_.is_capture() {
+            match self.get_piece(square_to) {
+                Some(p) => {
+                    self.remove_piece(square_to, p);
+                },
+                None => ()
+            }
         }
 
         self.apply_simple_move(square_from, square_to, piece);
@@ -187,7 +196,6 @@ impl Position {
             let (_, y_cap) = square_from.to_xy(); // captured pawn has same rank as capturing pawn start pos
             
             self.remove_piece(Square::from_xy(x_cap, y_cap), PieceType::new_pawn(1 - self.active_color));
-            self.was_capture = true;
         }
 
         //promo piece only has type info, not color info
@@ -295,7 +303,7 @@ impl Position {
         }
 
         //reset halfmove clock when pawn moves, or when there was a capture, otherwise increase
-        if self.was_capture || piece.is_pawn() {
+        if move_.is_capture() || piece.is_pawn() {
             self.halfmoveclock = 0;
         } else {
             self.halfmoveclock += 1;
@@ -308,13 +316,18 @@ impl Position {
 
         //flip color
         self.active_color = 1 - self.active_color;
+
+        //add move to last plies
+        self.ply_index = (self.ply_index + 1) % 12;
+        self.last_plies[self.ply_index] = Some(move_);
     }
 
     pub fn analyze_move(&self, mut move_: Move_) -> Move_ {
         //find out if ep, or castling
         //promotion is already set during parsing
-        move_.set_enpassant(false);
-        move_.set_castling(false);
+        move_.clear_enpassant();
+        move_.clear_castling();
+        move_.clear_capture();
 
         let (square_from, square_to) = move_.get_squares();
         let piece;
@@ -325,12 +338,21 @@ impl Position {
             }
         }
 
+        //capture?
+        match self.get_piece(square_to) {
+            Some(_) => {
+                move_.set_capture();
+            }
+            None => ()
+        }
+
         //ep?
         if piece.is_pawn() {
             match self.get_enpassant_square() {
                 Some(s) => {
                     if s == square_to {
-                        move_.set_enpassant(true);
+                        move_.set_enpassant();
+                        move_.set_capture();
                     }
                 }
                 None => ()
@@ -342,7 +364,7 @@ impl Position {
             if
                 (square_from == square::E1 && (square_to == square::G1 || square_to == square::C1)) ||
                 (square_from == square::E8 && (square_to == square::G8 || square_to == square::C8)) {
-                move_.set_castling(true);
+                move_.set_castling();
             }
         }
 

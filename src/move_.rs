@@ -8,6 +8,7 @@ const MOVE_MASK_FROM: u32         = 0b00000000_00000000_11111111_00000000;
 const MOVE_BIT_PROMO: u32         = 0b00000000_00000001_00000000_00000000;
 const MOVE_BIT_EP: u32            = 0b00000000_00000010_00000000_00000000;
 const MOVE_BIT_CASTLING: u32      = 0b00000000_00000100_00000000_00000000;
+const MOVE_BIT_CAPTURE: u32       = 0b00000000_00001000_00000000_00000000;
 const MOVE_MASK_PROMO_PIECE: u32  = 0b11111111_00000000_00000000_00000000;
 
 #[derive(Clone, Copy, Eq, Hash)]
@@ -99,34 +100,33 @@ impl Move_ {
         return self.0 & MOVE_BIT_EP != 0;
     }
 
-    #[allow(dead_code)]
-    pub fn set_promotion(&mut self, value: bool) {
-        if value {
-            self.0 |= MOVE_BIT_PROMO;
-        }
-        else {
-            self.0 &= !MOVE_BIT_PROMO;
-        }
+    pub fn is_capture(self) -> bool {
+        return self.0 & MOVE_BIT_CAPTURE != 0;
     }
 
-    pub fn set_castling(&mut self, value: bool) {
-        if value {
-            self.0 |= MOVE_BIT_CASTLING;
-        }
-        else {
-            self.0 &= !MOVE_BIT_CASTLING;
-        }
+    pub fn set_castling(&mut self) {
+        self.0 |= MOVE_BIT_CASTLING;
     }
 
-    pub fn set_enpassant(&mut self, value: bool) {
-        if value {
-            self.0 |= MOVE_BIT_EP;
-        }
-        else {
-            self.0 &= !MOVE_BIT_EP;
-        }
+    pub fn clear_castling(&mut self) {
+        self.0 &= !MOVE_BIT_CASTLING;
     }
 
+    pub fn set_enpassant(&mut self) {
+        self.0 |= MOVE_BIT_EP;
+    }
+
+    pub fn clear_enpassant(&mut self) {
+        self.0 &= !MOVE_BIT_EP;
+    }
+
+    pub fn set_capture(&mut self) {
+        self.0 |= MOVE_BIT_CAPTURE;
+    }
+
+    pub fn clear_capture(&mut self) {
+        self.0 &= !MOVE_BIT_CAPTURE;
+    }
     pub fn get_promo_piece(self) -> PieceType {
         PieceType::new(((self.0 & MOVE_MASK_PROMO_PIECE) >> 24) as u8)
     }

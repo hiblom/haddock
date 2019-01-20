@@ -183,10 +183,21 @@ pub fn evaluate(position: &Position, depth: i32) -> Outcome {
         return Outcome::DrawByHalfmoveclock(depth)
     }
 
-    //TODO repetition
+    if position.is_three_fold_repetition() {
+        return Outcome::DrawByRepetition(depth);
+    }
+    
     //TODO not enough material
 
-    let material_value = get_material_value(position);
+    let mut material_value = get_material_value(position);
+
+    //penalty when two fold repetition, and we are ahead, we do not want to give opponent chance to have three fold
+    if position.is_two_fold_repetition() {
+        if position.get_active_color() == 0 && material_value > 0 || position.get_active_color() == 1 && material_value < 0 {
+            material_value = 0;
+        }
+    }
+
     Outcome::Undecided(depth, material_value)
 }
 

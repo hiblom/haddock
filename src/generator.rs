@@ -145,10 +145,20 @@ impl<'a> Generator<'a> {
 
      fn generate_moveboard_moves(&self, current_square: Square, mb: usize, moves: &mut Vec<Move_>) {
         let mut move_board = moveboard::get_move_board(mb, current_square);
+        
         move_board &= !self.own_piece_board; //exclude moves to pieces of same color
 
-        for sq in move_board.get_squares() {
+        let silent_board = move_board & !self.opp_piece_board;
+        let capture_board = move_board & self.opp_piece_board;
+        
+        for sq in silent_board.get_squares() {
             moves.push(Move_::from_squares(current_square, sq));
+        }
+
+        for sq in capture_board.get_squares() {
+            let mut mv = Move_::from_squares(current_square, sq);
+            mv.set_capture();
+            moves.push(mv);
         }
     }
 
@@ -159,8 +169,17 @@ impl<'a> Generator<'a> {
         move_board |= self.generate_move_board(moveboard::DIR_DOWN, current_square, BitBoard::get_highest_square);
         move_board |= self.generate_move_board(moveboard::DIR_LEFT, current_square, BitBoard::get_highest_square);
         
-        for sq in move_board.get_squares() {
+        let silent_board = move_board & !self.opp_piece_board;
+        let capture_board = move_board & self.opp_piece_board;
+        
+        for sq in silent_board.get_squares() {
             moves.push(Move_::from_squares(current_square, sq));
+        }
+
+        for sq in capture_board.get_squares() {
+            let mut mv = Move_::from_squares(current_square, sq);
+            mv.set_capture();
+            moves.push(mv);
         }
     }
 
@@ -171,8 +190,17 @@ impl<'a> Generator<'a> {
         move_board |= self.generate_move_board(moveboard::DIR_DOWN_LEFT, current_square, BitBoard::get_highest_square);
         move_board |= self.generate_move_board(moveboard::DIR_UP_LEFT, current_square, BitBoard::get_lowest_square);
 
-        for sq in move_board.get_squares() {
+        let silent_board = move_board & !self.opp_piece_board;
+        let capture_board = move_board & self.opp_piece_board;
+        
+        for sq in silent_board.get_squares() {
             moves.push(Move_::from_squares(current_square, sq));
+        }
+
+        for sq in capture_board.get_squares() {
+            let mut mv = Move_::from_squares(current_square, sq);
+            mv.set_capture();
+            moves.push(mv);
         }
     }
 
@@ -187,8 +215,17 @@ impl<'a> Generator<'a> {
         move_board |= self.generate_move_board(moveboard::DIR_DOWN_LEFT, current_square, BitBoard::get_highest_square);
         move_board |= self.generate_move_board(moveboard::DIR_UP_LEFT, current_square, BitBoard::get_lowest_square);
 
-        for sq in move_board.get_squares() {
+        let silent_board = move_board & !self.opp_piece_board;
+        let capture_board = move_board & self.opp_piece_board;
+        
+        for sq in silent_board.get_squares() {
             moves.push(Move_::from_squares(current_square, sq));
+        }
+
+        for sq in capture_board.get_squares() {
+            let mut mv = Move_::from_squares(current_square, sq);
+            mv.set_capture();
+            moves.push(mv);
         }
     }
 
@@ -219,7 +256,7 @@ impl<'a> Generator<'a> {
                 if  self.position.get_piece(square::F1).is_none() && 
                     self.position.get_piece(square::G1).is_none() {
                         let mut mv = Move_::from_squares(square::E1, square::G1);
-                        mv.set_castling(true);
+                        mv.set_castling();
                         moves.push(mv);
                 }
             }
@@ -229,7 +266,7 @@ impl<'a> Generator<'a> {
                     self.position.get_piece(square::C1).is_none() && 
                     self.position.get_piece(square::D1).is_none() {
                         let mut mv = Move_::from_squares(square::E1, square::C1);
-                        mv.set_castling(true);
+                        mv.set_castling();
                         moves.push(mv);
                 }
             }
@@ -240,7 +277,7 @@ impl<'a> Generator<'a> {
                 if  self.position.get_piece(square::F8).is_none() && 
                     self.position.get_piece(square::G8).is_none() {
                         let mut mv = Move_::from_squares(square::E8, square::G8);
-                        mv.set_castling(true);
+                        mv.set_castling();
                         moves.push(mv);
                 }
             }
@@ -250,7 +287,7 @@ impl<'a> Generator<'a> {
                     self.position.get_piece(square::C8).is_none() && 
                     self.position.get_piece(square::D8).is_none() {
                         let mut mv = Move_::from_squares(square::E8, square::C8);
-                        mv.set_castling(true);
+                        mv.set_castling();
                         moves.push(mv);
                 }
             }
@@ -263,13 +300,31 @@ impl<'a> Generator<'a> {
         let mut move_board = moveboard::get_move_board(PAWN_PUSH_MOVEBOARD[color as usize], current_square);
         move_board &= !self.all_piece_board; //exclude moves to occupied squares
         let pushed = move_board.not_empty();
-
-        let cap_board = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], current_square);
-        move_board |= cap_board & self.opp_piece_board; //only include captures
         
-        for sq in move_board.get_squares() {
-            //check for promotion
+        if pushed {
+            let sq = move_board.get_square();
             let m = Move_::from_squares(current_square, sq);
+            let (_, y_to) = sq.to_xy();
+
+            if (color == COLOR_WHITE && y_to == 7) || (color == COLOR_BLACK && y_to == 0) {
+                moves.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
+            }
+            else {
+                moves.push(m);
+            }
+        }
+ 
+        let cap_board = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], current_square);
+        let captures_board = cap_board & self.opp_piece_board; //only include captures
+        
+        for sq in captures_board.get_squares() {
+            //check for promotion
+            let mut m = Move_::from_squares(current_square, sq);
+
+            m.set_capture();
             let (_, y_to) = sq.to_xy();
 
             if (color == COLOR_WHITE && y_to == 7) || (color == COLOR_BLACK && y_to == 0) {
@@ -310,7 +365,8 @@ impl<'a> Generator<'a> {
                 let ep_bb = BitBoard::from_square(ep_sq);
                 if (ep_bb & cap_board).not_empty() {
                     let mut mv = Move_::from_squares(current_square, ep_sq);
-                    mv.set_enpassant(true);
+                    mv.set_enpassant();
+                    mv.set_capture();
                     moves.push(mv);
                 }
             }
@@ -322,7 +378,7 @@ impl<'a> Generator<'a> {
         return self.is_square_attacked(s, color);
     }
 
-    pub fn find_lowest_attacker(&self, square: Square, color: u8) -> Option<(PieceType, Square)> {
+    pub fn find_lowest_attacker(&self, square: Square, color: u8) -> Option<Square> {
         let other_color = 1 - color;
 
         //pawn? use own color pawn capture board to intersect with opp pawns
@@ -330,7 +386,7 @@ impl<'a> Generator<'a> {
         let bb = self.position.get_bit_board(PieceType::new_pawn(other_color));
         let pb = mb & bb;
         if pb.not_empty() {
-            return Some((PieceType::new_pawn(other_color), pb.get_square()));
+            return Some(pb.get_square());
         }
 
         //todo EP
@@ -340,14 +396,14 @@ impl<'a> Generator<'a> {
         let bb = self.position.get_bit_board(PieceType::new_knight(other_color));
         let pb = mb & bb;
         if pb.not_empty() {
-            return Some((PieceType::new_knight(other_color), pb.get_square()));
+            return Some(pb.get_square());
         }
 
         //bishop?
         let p = PieceType::new_bishop(other_color);
         match self.find_specific_diagonal_attacker(square, p) {
             Some(sq) => {
-                return Some((p, sq));
+                return Some(sq);
             },
             None => ()
         }
@@ -356,7 +412,7 @@ impl<'a> Generator<'a> {
         let p = PieceType::new_rook(other_color);
         match self.find_specific_orthogonal_attacker(square, p) {
             Some(sq) => {
-                return Some((p, sq));
+                return Some(sq);
             },
             None => ()
         }
@@ -365,13 +421,13 @@ impl<'a> Generator<'a> {
         let p = PieceType::new_queen(other_color);
         match self.find_specific_orthogonal_attacker(square, p) {
             Some(sq) => {
-                return Some((p, sq));
+                return Some(sq);
             },
             None => ()
         }
         match self.find_specific_diagonal_attacker(square, p) {
             Some(sq) => {
-                return Some((p, sq));
+                return Some(sq);
             },
             None => ()
         }
@@ -381,7 +437,7 @@ impl<'a> Generator<'a> {
         let bb = self.position.get_bit_board(PieceType::new_king(other_color));
         let pb = mb & bb;
         if pb.not_empty() {
-            return Some((PieceType::new_king(other_color), pb.get_square()));
+            return Some(pb.get_square());
         }
 
         None
@@ -424,8 +480,7 @@ impl<'a> Generator<'a> {
         loop {
             let gen = Generator::new(&pos);
             match gen.find_lowest_attacker(square, 1 - pos.get_active_color()) {
-                Some((_, attacking_sq)) => {
-                    //println!("active color: {}, square: {}, pos:\n{}", pos.get_active_color(), attacking_sq.to_fen(), pos);
+                Some(attacking_sq) => {
                     let mut move_ = Move_::from_squares(attacking_sq, square);
                     //TODO promotion
                     move_ = pos.analyze_move(move_);
