@@ -100,6 +100,7 @@ impl<'a> Generator<'a> {
         result
     }
 
+    #[allow(dead_code)] 
     pub fn generate_legal_moves(&self) -> Vec<Move_> {
         let color = self.position.get_active_color();
         let mut moves: Vec<Move_> = Vec::with_capacity(80);
@@ -389,9 +390,9 @@ impl<'a> Generator<'a> {
     pub fn is_square_attacked(&self, square: Square, color: u8) -> bool {
         let other_color = 1 - color;
 
-        //attacked by king?
-        let mb = moveboard::get_move_board(moveboard::MOVEBOARD_KING, square);
-        let bb = self.position.get_bit_board(PieceType::new_king(other_color));
+        //attacked by pawn. use own color pawn capture board to intersect with opp pawns
+        let mb = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], square);
+        let bb = self.position.get_bit_board(PieceType::new_pawn(other_color));
         if (mb & bb).not_empty() {
             return true;
         }
@@ -403,17 +404,19 @@ impl<'a> Generator<'a> {
             return true;
         }
 
-        //attacked by pawn. use own color pawn capture board to intersect with opp pawns
-        let mb = moveboard::get_move_board(PAWN_CAP_MOVEBOARD[color as usize], square);
-        let bb = self.position.get_bit_board(PieceType::new_pawn(other_color));
+        //sliding piece attacks
+        if self.find_some_orthogonal_attacker(square, other_color) || self.find_some_diagonal_attacker(square, other_color) {
+            return true;
+        }
+
+        //attacked by king?
+        let mb = moveboard::get_move_board(moveboard::MOVEBOARD_KING, square);
+        let bb = self.position.get_bit_board(PieceType::new_king(other_color));
         if (mb & bb).not_empty() {
             return true;
         }
 
-        //sliding piece attacks
-        return
-            self.find_some_orthogonal_attacker(square, other_color) ||
-            self.find_some_diagonal_attacker(square, other_color);
+        false
     }
 
     pub fn capture_exchange(&self, square: Square) -> Position {

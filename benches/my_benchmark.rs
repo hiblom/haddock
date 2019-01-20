@@ -40,7 +40,7 @@ fn bench_evaluate_position(c: &mut Criterion) {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = haddock::parser::parse_fen(&fen_parts).unwrap();
 
-    c.bench_function("evaluate position", move |b| b.iter(|| haddock::evaluation::evaluate(&position, 0, true)));
+    c.bench_function("evaluate position", move |b| b.iter(|| haddock::evaluation::evaluate(&position, 0)));
 }
 
 

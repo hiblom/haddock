@@ -4,11 +4,11 @@ use crate::global;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Outcome {
-    Illegal(i32),
+    #[allow(dead_code)] Illegal(i32),
     Undecided(i32, i32),
-    #[allow(dead_code)] WhiteIsMate(i32),
-    #[allow(dead_code)] BlackIsMate(i32),
-    #[allow(dead_code)] DrawByStalemate(i32),
+    WhiteIsMate(i32),
+    BlackIsMate(i32),
+    DrawByStalemate(i32),
     DrawByHalfmoveclock(i32),
     #[allow(dead_code)] DrawByRepetition(i32),
     #[allow(dead_code)] DrawByInsufficientMaterial(i32)

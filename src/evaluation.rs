@@ -1,7 +1,6 @@
 use crate::global;
 use crate::position::Position;
 use crate::outcome::Outcome;
-use crate::generator::Generator;
 
 const PIECE_VALUE: [i32; 12] = [
     100,-100, //pawn
@@ -148,14 +147,15 @@ const PIECE_SQUARE_VALUE: [[i32; 64]; 12] = [
     ]
 ];
 
-pub fn evaluate(position: &Position, depth: i32, do_legal_check: bool) -> Outcome {
+pub fn evaluate(position: &Position, depth: i32) -> Outcome {
     //check status of other king. when check, then the outcome is illegal
-    let color = position.get_active_color();
-    let other_color = 1 - color;
+    //let color = position.get_active_color();
 
+    /*
     if do_legal_check && Generator::new(position).is_check(other_color) {
         return Outcome::Illegal(depth)
     }
+    */
 
     /*
     let check = is_check(position, color);

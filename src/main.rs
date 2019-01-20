@@ -20,7 +20,6 @@ mod searchcommand;
 mod searcher;
 mod outcome;
 mod evaluation;
-mod tree;
 mod bitboard;
 mod moveboard;
 

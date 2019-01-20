@@ -312,7 +312,7 @@ impl Searcher {
         let pos = stack[depth].position;
         let color = pos.get_active_color();
         let generator = Generator::new(&pos);
-
+        
         let len = stack[depth].moves.len();
         for i in 0..len {
             let mv = stack[depth].moves[i];
@@ -323,23 +323,25 @@ impl Searcher {
                     child_pos = Generator::new(&child_pos).capture_exchange(square_to);
                 }
 
-                let score = Some(evaluation::evaluate(&child_pos, depth as i32, false));
+                let score = Some(evaluation::evaluate(&child_pos, depth as i32));
                 self.node_count += 1;
 
                 if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
                     stack[depth].score = score;
                     stack[depth].sub_pv = Some(vec![mv]);
 
+                    let parent_depth = depth - 1;
+
                     if depth >= 1 && depth <= 10 {
-                        best_moves[depth - 1].insert(stack[depth - 1].moves[stack[depth - 1].current_index], mv);
+                        best_moves[parent_depth].insert(stack[parent_depth].moves[stack[parent_depth].current_index], mv);
                     }
 
                     //cutoff
                     if depth > 0 {
-                        if Searcher::is_better_outcome(&stack[depth - 1].score, &score, 1 - color) {
-                            //println!("move {} was refuted at depth {}", stack[depth - 1].moves[stack[depth - 1].current_index].to_fen(), depth);
+                        if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
+                            //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
                             stack.pop();
-                            return depth - 1;
+                            return parent_depth;
                         }
                     }
                 }
