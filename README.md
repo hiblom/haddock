@@ -11,10 +11,14 @@ Pre-release 0.2.1 Features
 * improved evaluation
 * alpha beta move ordering & pruning
 
-Roadmap
+Next pre-release
 * quiesence search / SEE
+* better time management
+
+Roadmap
+* opening book
 * implement all UCI commands
-* opening books
+* transposition tables
 * end-game tables
 * multi-threaded search
 * etc...
