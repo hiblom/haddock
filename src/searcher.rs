@@ -334,15 +334,16 @@ impl Searcher {
         let len = stack[depth].moves.len();
         for i in 0..len {
             let mv = stack[depth].moves[i];
+            if depth > 3 && !mv.is_capture() {
+                //do not examine silent moves after depth 3
+                continue;
+            }
             
             if let Some(mut child_pos) = generator.apply_pseudo_legal_move(mv) {
                 self.node_count += 1;
                 if mv.is_capture() {
                     let (_, square_to) = mv.get_squares();
                     child_pos = Generator::new(&child_pos).capture_exchange(square_to);
-                } else if depth > 3 {
-                    //do not examine silent moves after depth 3
-                    continue;
                 }
 
                 let score = Some(evaluation::evaluate(&child_pos, depth as i32));
