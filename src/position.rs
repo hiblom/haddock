@@ -145,16 +145,15 @@ impl Position {
         self.fullmovenumber
     }
 
-    pub fn is_two_fold_repetition(&self) -> bool {
-        return 
-            self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 4) % 12];
-    }
-    
     pub fn is_three_fold_repetition(&self) -> bool {
         //last added move was also added 2 more times
         return 
             self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 4) % 12] &&
             self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 8) % 12];
+    }
+
+    pub fn is_draw_by_halfmoveclock(&self) -> bool {
+        self.halfmoveclock >= global::MAX_HALFMOVECLOCK
     }
 
     fn apply_simple_move(&mut self, square_from: Square, square_to: Square, piece_type: PieceType) {

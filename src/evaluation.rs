@@ -1,4 +1,5 @@
-use crate::global;
+use std::cmp;
+
 use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
 use crate::position::Position;
@@ -19,6 +20,9 @@ const START_PIECE_VALUE_TOTAL:i32 =
      4 * PIECE_VALUE[6] + //rook
      4 * PIECE_VALUE[8] + //bishop
      4 * PIECE_VALUE[10]; //knight
+
+const END_PIECE_VALUE_THRESHOLD:i32 = 1000; //endgame threshold
+const PIECE_VALUE_DIFF:i32 = START_PIECE_VALUE_TOTAL - END_PIECE_VALUE_THRESHOLD;
 
 const PIECE_SQUARE_VALUE: [[[i32; 64]; 2]; 12] = [
     //white pawn    
@@ -300,56 +304,9 @@ const PIECE_SQUARE_VALUE: [[[i32; 64]; 2]; 12] = [
 ];
 
 pub fn evaluate(position: &Position, depth: i32) -> Outcome {
-    //check status of other king. when check, then the outcome is illegal
-    //let color = position.get_active_color();
+    //TODO not enough material ??
 
-    /*
-    if do_legal_check && Generator::new(position).is_check(other_color) {
-        return Outcome::Illegal(depth)
-    }
-    */
-
-    /*
-    let check = is_check(position, color);
-    
-    let no_legal_moves_left = generator::generate_legal_moves(position).len() == 0;
-
-    let check_mate = check && no_legal_moves_left;
-    if check_mate {
-        if color == global::COLOR_WHITE {
-            return Outcome::WhiteIsMate(0)
-        }
-        else {
-            return Outcome::BlackIsMate(0)
-        }
-    }
-
-    let stale_mate = !check && no_legal_moves_left;
-    if stale_mate {
-        return Outcome::DrawByStalemate
-    }
-    */
-
-    let halfmoveclock = position.get_halfmoveclock() >= global::MAX_HALFMOVECLOCK;
-    if halfmoveclock {
-        return Outcome::DrawByHalfmoveclock(depth)
-    }
-
-    if position.is_three_fold_repetition() {
-        return Outcome::DrawByRepetition(depth);
-    }
-    
-    //TODO not enough material
-
-    let mut material_value = get_material_value(position);
-
-    //penalty when two fold repetition, and we are ahead, we do not want to give opponent chance to have three fold
-    if position.is_two_fold_repetition() {
-        if position.get_active_color() == 0 && material_value > 0 || position.get_active_color() == 1 && material_value < 0 {
-            material_value = 0;
-        }
-    }
-
+    let material_value = get_material_value(position);
     Outcome::Undecided(depth, material_value)
 }
 
@@ -357,12 +314,17 @@ fn get_material_value(position: &Position) -> i32 {
     let mut value: i32 = 0;
     let pos_value_total = get_pos_value_total(position);
 
+    //anything lower than 1000 points is endgame
+    let start_weight = cmp::min(pos_value_total - END_PIECE_VALUE_THRESHOLD, 0); //distance to threshold
+    let end_weight = cmp::max(START_PIECE_VALUE_TOTAL - pos_value_total, PIECE_VALUE_DIFF); //distance to start
+
+
     for (piece, square) in position.get_all_active_pieces() {
         value += PIECE_VALUE[piece.to_usize()] + 
         (
-            PIECE_SQUARE_VALUE[piece.to_usize()][0][square.to_usize()] * pos_value_total +
-            PIECE_SQUARE_VALUE[piece.to_usize()][1][square.to_usize()] * (START_PIECE_VALUE_TOTAL - pos_value_total)
-        ) / START_PIECE_VALUE_TOTAL;
+            PIECE_SQUARE_VALUE[piece.to_usize()][0][square.to_usize()] * start_weight +
+            PIECE_SQUARE_VALUE[piece.to_usize()][1][square.to_usize()] * end_weight
+        ) / PIECE_VALUE_DIFF;
     }
 
     //println!("pos total {} material value is {}", pos_value_total, value);

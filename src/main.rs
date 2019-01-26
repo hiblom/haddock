@@ -14,6 +14,7 @@ mod move_;
 mod piecetype;
 mod game;
 mod position;
+mod moveresult;
 mod parser;
 mod generator;
 mod searchcommand;
@@ -22,6 +23,7 @@ mod outcome;
 mod evaluation;
 mod bitboard;
 mod moveboard;
+
 
 use std::io;
 use std::sync::mpsc::{Sender, Receiver};

@@ -16,6 +16,7 @@ pub mod move_;
 pub mod piecetype;
 pub mod game;
 pub mod position;
+pub mod moveresult;
 pub mod parser;
 pub mod generator;
 pub mod searchcommand;

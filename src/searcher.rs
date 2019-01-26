@@ -6,14 +6,15 @@ use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
+use crate::global;
 use crate::evaluation;
 use crate::generator::Generator;
-use crate::global;
 use crate::move_::Move_;
 use crate::outcome::Outcome;
 use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searchtype::SearchType;
+use crate::moveresult::MoveResult;
 
 pub struct Searcher {
     receiver: Receiver<SearchCommand>,
@@ -144,7 +145,7 @@ impl Searcher {
                             stack[d].score = Some(Outcome::BlackIsMate(d as i32));
                         }
                     } else {
-                        stack[d].score = Some(Outcome::DrawByStalemate(d as i32));
+                        stack[d].score = Some(Outcome::Draw(d as i32));
                     }
                 }
 
@@ -313,7 +314,7 @@ impl Searcher {
         let generator = Generator::new(&pos);
 
         //examine "null move"
-        if depth > 3 {
+        if depth > 4 {
             let score = Some(evaluation::evaluate(&pos, depth as i32));
             if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
                 stack[depth].score = score;
@@ -334,37 +335,41 @@ impl Searcher {
         let len = stack[depth].moves.len();
         for i in 0..len {
             let mv = stack[depth].moves[i];
-            if depth > 3 && !mv.is_capture() {
-                //do not examine silent moves after depth 3
+            if depth > 4 && !mv.is_capture() {
+                //do not examine silent moves after depth 4
                 continue;
             }
-            
-            if let Some(mut child_pos) = generator.apply_pseudo_legal_move(mv) {
-                self.node_count += 1;
-                if mv.is_capture() {
-                    let (_, square_to) = mv.get_squares();
-                    child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+            self.node_count += 1;
+
+            let score;
+            match generator.try_apply_move(mv) {
+                MoveResult::Next(mut child_pos) => {
+                    if mv.is_capture() {
+                        let (_, square_to) = mv.get_squares();
+                        child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+                    }
+                    score = Some(evaluation::evaluate(&child_pos, depth as i32));
+                },
+                MoveResult::Illegal => continue,
+                MoveResult::Draw => score = Some(Outcome::Draw(depth as i32))
+            }
+
+            if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
+                stack[depth].score = score;
+                stack[depth].sub_pv = Some(vec![mv]);
+
+                if depth >= 1 && depth <= 10 {
+                    let parent_depth = depth - 1;
+                    best_moves[parent_depth].insert(stack[parent_depth].moves[stack[parent_depth].current_index], mv);
                 }
 
-                let score = Some(evaluation::evaluate(&child_pos, depth as i32));
-
-                if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
-                    stack[depth].score = score;
-                    stack[depth].sub_pv = Some(vec![mv]);
-
-                    if depth >= 1 && depth <= 10 {
-                        let parent_depth = depth - 1;
-                        best_moves[parent_depth].insert(stack[parent_depth].moves[stack[parent_depth].current_index], mv);
-                    }
-
-                    //cutoff
-                    if depth > 0 {
-                        let parent_depth = depth - 1;
-                        if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
-                            //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
-                            stack.pop();
-                            return parent_depth;
-                        }
+                //cutoff
+                if depth > 0 {
+                    let parent_depth = depth - 1;
+                    if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
+                        //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
+                        stack.pop();
+                        return parent_depth;
                     }
                 }
             }
@@ -379,11 +384,19 @@ impl Searcher {
 
         let len = stack[depth].moves.len();
         while stack[depth].current_index < len {
-            child_pos = Generator::new(&stack[depth].position).apply_pseudo_legal_move(stack[depth].moves[stack[depth].current_index]);
-            if child_pos.is_some() {
-                break;
+            let mv = stack[depth].moves[stack[depth].current_index];
+            match Generator::new(&stack[depth].position).try_apply_move(mv) {
+                MoveResult::Illegal => stack[depth].current_index += 1,
+                MoveResult::Draw => {
+                    stack[depth].score = Some(Outcome::Draw(depth as i32));
+                    stack[depth].sub_pv = Some(vec![mv]);
+                    break;
+                }
+                MoveResult::Next(p) => {
+                    child_pos = Some(p);
+                    break;
+                }
             }
-            stack[depth].current_index += 1;
         }
 
         if child_pos.is_none() {

@@ -1,6 +1,6 @@
-use crate::position::Position;
 use crate::global::COLOR_WHITE;
 use crate::global::COLOR_BLACK;
+use crate::position::Position;
 use crate::piecetype;
 use crate::piecetype::PieceType;
 use crate::move_::Move_;
@@ -8,6 +8,7 @@ use crate::square;
 use crate::square::Square;
 use crate::moveboard;
 use crate::bitboard::BitBoard;
+use crate::moveresult::MoveResult;
 
 const PAWN_PUSH_MOVEBOARD: [usize; 2] = [moveboard::MOVEBOARD_WHITE_PAWN_PUSH, moveboard::MOVEBOARD_BLACK_PAWN_PUSH];
 const PAWN_CAP_MOVEBOARD: [usize; 2] = [moveboard::MOVEBOARD_WHITE_PAWN_CAP, moveboard::MOVEBOARD_BLACK_PAWN_CAP];
@@ -73,21 +74,26 @@ impl<'a> Generator<'a> {
         false //should never happen
     }
 
-    pub fn apply_pseudo_legal_move(&self, move_: Move_) -> Option<Position> {
+    pub fn try_apply_move(&self, move_: Move_) -> MoveResult {
         let color = self.position.get_active_color();
 
         //check castling
         if move_.is_castling() && !self.is_castling_legal(move_) {
-            return None;
+            return MoveResult::Illegal;
         }
 
         let mut pos = self.position.clone();
         pos.apply_move(move_);
         if Generator::new(&pos).is_check(color) {
-            return None;
+            return MoveResult::Illegal;
         }
 
-        Some(pos)
+        //immediately check for two draw conditions
+        if pos.is_three_fold_repetition() || pos.is_draw_by_halfmoveclock() {
+            return MoveResult::Draw;
+        }
+
+        MoveResult::Next(pos)
     }
 
     pub fn generate_moves(&self) -> Vec<Move_> {
