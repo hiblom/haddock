@@ -9,6 +9,7 @@ use crate::piecetype::PieceType;
 use crate::square;
 use crate::square::Square;
 use crate::bitboard::BitBoard;
+use crate::zobrist;
 
 #[derive(Clone, Copy)]
 pub struct Position {
@@ -18,8 +19,7 @@ pub struct Position {
     enpassant_square: Option<Square>,
     halfmoveclock: u32,
     fullmovenumber: u32,
-    last_plies: [Option<Move_>; 12],
-    ply_index: usize
+    hash: u64
 }
 
 impl Position {
@@ -31,8 +31,7 @@ impl Position {
             enpassant_square: None,
             halfmoveclock: 0,
             fullmovenumber: 0,
-            last_plies: [None, None, None, None, None, None, None, None, None, None, None, None],
-            ply_index: 11
+            hash: 0
         }
     }
 
@@ -146,10 +145,14 @@ impl Position {
     }
 
     pub fn is_three_fold_repetition(&self) -> bool {
+        //todo
+        false
         //last added move was also added 2 more times
+        /*
         return 
             self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 4) % 12] &&
             self.last_plies[self.ply_index] == self.last_plies[(self.ply_index + 8) % 12];
+        */
     }
 
     pub fn is_draw_by_halfmoveclock(&self) -> bool {
@@ -157,8 +160,23 @@ impl Position {
     }
 
     fn apply_simple_move(&mut self, square_from: Square, square_to: Square, piece_type: PieceType) {
-        self.set_piece(square_to, piece_type);
         self.remove_piece(square_from, piece_type);
+        println!("apply zobrist square piece key {}, {}", square_from.to_usize(), piece_type.to_usize());
+        self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_from.to_usize()][piece_type.to_usize()];
+        
+
+        self.set_piece(square_to, piece_type);
+        println!("apply zobrist square piece key {}, {}", square_to.to_usize(), piece_type.to_usize());
+        self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][piece_type.to_usize()];
+        
+    }
+
+    fn clear_castling_status(&mut self, index: usize) {
+        if self.castling_status[index] {
+            self.castling_status[index] = false;
+            println!("apply zobrist castle key {}", index);
+            self.hash ^= zobrist::ZOBRIST_CASTLE_KEYS[index];
+        }
     }
 
     pub fn apply_move(&mut self, move_: Move_) {
@@ -175,6 +193,8 @@ impl Position {
             match self.get_piece(square_to) {
                 Some(p) => {
                     self.remove_piece(square_to, p);
+                    println!("apply zobrist square piece key {}, {}", square_to.to_usize(), p.to_usize());
+                    self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][p.to_usize()];
                 },
                 None => ()
             }
@@ -188,7 +208,11 @@ impl Position {
             let (x_cap, _) = square_to.to_xy(); // captured pawn has same file as ep square
             let (_, y_cap) = square_from.to_xy(); // captured pawn has same rank as capturing pawn start pos
             
-            self.remove_piece(Square::from_xy(x_cap, y_cap), PieceType::new_pawn(1 - self.active_color));
+            let cap_square = Square::from_xy(x_cap, y_cap);
+            let cap_ptype = PieceType::new_pawn(1 - self.active_color);
+            self.remove_piece(cap_square, PieceType::new_pawn(1 - self.active_color));
+            println!("apply zobrist square piece key {}, {}", cap_square.to_usize(), cap_ptype.to_usize());
+            self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[cap_square.to_usize()][cap_ptype.to_usize()];
         }
 
         //promo piece only has type info, not color info
@@ -196,7 +220,13 @@ impl Position {
             let mut promo_piece = move_.get_promo_piece();
             promo_piece.set_color(self.get_active_color());
             self.remove_piece(square_to, piece);
+            println!("apply zobrist square piece key {}, {}", square_to.to_usize(), piece.to_usize());
+            self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][piece.to_usize()];
+            
             self.set_piece(square_to, promo_piece);
+            println!("apply zobrist square piece key {}, {}", square_to.to_usize(), promo_piece.to_usize());
+            self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][promo_piece.to_usize()];
+            
         }
 
         //castling
@@ -206,29 +236,29 @@ impl Position {
             if square_to == square::C1 {
                 self.apply_simple_move(square::A1, square::D1, PieceType::new_rook(COLOR_WHITE));
                 castled = true;
-                self.castling_status[0] = false;
-                self.castling_status[1] = false;
+                self.clear_castling_status(0);
+                self.clear_castling_status(1);
             }
             //e1g1
             else if square_to ==square::G1 {
                 self.apply_simple_move(square::H1, square::F1, PieceType::new_rook(COLOR_WHITE));
                 castled = true;
-                self.castling_status[0] = false;
-                self.castling_status[1] = false;
+                self.clear_castling_status(0);
+                self.clear_castling_status(1);
             }
             //e8c8
             else if square_to == square::C8 {
                 self.apply_simple_move(square::A8, square::D8, PieceType::new_rook(COLOR_BLACK));
                 castled = true;
-                self.castling_status[2] = false;
-                self.castling_status[3] = false;
+                self.clear_castling_status(2);
+                self.clear_castling_status(3);
             }
             //e8g8
             else if square_to == square::G8 {
                 self.apply_simple_move(square::H8, square::F8, PieceType::new_rook(COLOR_BLACK));
                 castled = true;
-                self.castling_status[2] = false;
-                self.castling_status[3] = false;
+                self.clear_castling_status(2);
+                self.clear_castling_status(3);
             }
         }
 
@@ -237,61 +267,74 @@ impl Position {
             if self.active_color == global::COLOR_WHITE {
                 if self.castling_status[0] {
                     if square_from == square::E1 || square_from == square::H1 {
-                        self.castling_status[0] = false;
+                        self.clear_castling_status(0);
                     }
                 }
                 if self.castling_status[1] {
                     if square_from == square::E1 || square_from == square::A1 {
-                        self.castling_status[1] = false;
+                        self.clear_castling_status(1);
                     }
                 }
                 if self.castling_status[2] {
                     if square_to == square::H8 {
-                        self.castling_status[2] = false;
+                        self.clear_castling_status(2);
                     }
                 }
                 if self.castling_status[3] {
                     if square_to == square::A8  {
-                        self.castling_status[3] = false;
+                        self.clear_castling_status(3);
                     }
                 }
             }
             else {
                 if self.castling_status[2] {
                     if square_from == square::E8 || square_from == square::H8 {
-                        self.castling_status[2] = false;
+                        self.clear_castling_status(2);
                     }
                 }
                 if self.castling_status[3] {
                     if square_from == square::E8 || square_from == square::A8 {
-                        self.castling_status[3] = false;
+                        self.clear_castling_status(3);
                     }
                 }
                 if self.castling_status[0] {
                     if square_to == square::H1 {
-                        self.castling_status[0] = false;
+                        self.clear_castling_status(0);
                     }
                 }
                 if self.castling_status[1] {
                     if square_to == square::A1  {
-                        self.castling_status[1] = false;
+                        self.clear_castling_status(1);
                     }
                 }
             }
         }
 
-        //set en-passant square
-        self.enpassant_square = None;
+        //clear en-passant square
+        match self.enpassant_square {
+            Some(ep_sq) => {
+                let (x, _) = ep_sq.to_xy();
+                println!("apply zobrist ep file key {}", x);
+                self.hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x as usize];
+                self.enpassant_square = None;
+            },
+            None => ()
+        }
 
+        //set en-passant square
         if piece.is_pawn() {
             let (x_from, y_from) = square_from.to_xy();
             let (_, y_to) = square_to.to_xy();
 
             if self.active_color == global::COLOR_WHITE && y_from == 1 && y_to == 3 {
                 self.enpassant_square = Some(Square::from_xy(x_from, 2));
+                println!("apply zobrist ep file key {}", x_from);
+                self.hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x_from as usize];
             }
             else if self.active_color == global::COLOR_BLACK && y_from == 6 && y_to == 4 {
                 self.enpassant_square = Some(Square::from_xy(x_from, 5));
+                println!("apply zobrist ep file key {}", x_from);
+                self.hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x_from as usize];
             }
         }
 
@@ -309,10 +352,9 @@ impl Position {
 
         //flip color
         self.active_color = 1 - self.active_color;
-
-        //add move to last plies
-        self.ply_index = (self.ply_index + 1) % 12;
-        self.last_plies[self.ply_index] = Some(move_);
+        println!("apply zobrist black key");
+        self.hash ^= zobrist::ZOBRIST_BLACK_KEY[0];
+        
     }
 
     pub fn analyze_move(&self, mut move_: Move_) -> Move_ {
@@ -362,6 +404,42 @@ impl Position {
         }
 
         move_
+    }
+
+    pub fn generate_new_hash(&mut self) {
+        let mut hash: u64 = 0;
+
+        //pieces
+        for (piece, square) in self.get_all_active_pieces() {
+            hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square.to_usize()][piece.to_usize()];
+        }
+
+        //side to move
+        if self.active_color == 1 {
+            hash ^= zobrist::ZOBRIST_BLACK_KEY[0];
+        }
+
+        //castling rights
+        for i in 0..4 {
+            if self.castling_status[i] {
+                hash ^= zobrist::ZOBRIST_CASTLE_KEYS[i];
+            }
+        }
+
+        //ep square
+        match self.enpassant_square {
+            Some(sq) => {
+                let (x, _) = sq.to_xy();
+                hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x as usize];
+            },
+            None => ()
+        }
+
+        self.hash = hash;
+    }
+
+    pub fn get_hash(&self) -> u64 {
+        self.hash
     }
 }
 

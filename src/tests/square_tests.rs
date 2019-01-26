@@ -10,6 +10,7 @@ pub fn test_get_fen_e2() {
     assert_eq!("e2", square_string, "Unexpected square string");
 }
 
+#[test]
 pub fn test_from_str() {
     //arrange
     let fen = "e2";

@@ -41,6 +41,7 @@ pub fn parse_fen(fen_parts: &[&str]) -> Option<Position> {
         return None;
     }
 
+    position.generate_new_hash();
     Some(position)
 }
 

@@ -6,6 +6,7 @@ extern crate lazy_static;
 mod macros;
 
 mod global;
+mod zobrist;
 mod searchtype;
 mod command;
 mod uci;
@@ -36,10 +37,6 @@ fn main() {
     println!("Welcome to Haddock Chess Engine");
 
     //initialize game...
-    //start thread to initialize
-    //communication with game will be done async
-    //prepare move matrices???? -> omg!!
-
     let (game_handle, game_channel) = setup_game();
     let (_console_handle, input_channel) = setup_input();
 

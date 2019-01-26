@@ -23,7 +23,6 @@ pub struct Game {
 
 impl<'a> Game {
     pub fn new(receiver: Receiver<InputCommand>) -> Game {
-        println!("Initializing game");
         Game {
             receiver: receiver,
             position: None,

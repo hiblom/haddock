@@ -8,6 +8,7 @@ extern crate lazy_static;
 pub mod macros;
 
 pub mod global;
+pub mod zobrist;
 pub mod searchtype;
 pub mod command;
 pub mod uci;
