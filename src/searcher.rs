@@ -191,6 +191,16 @@ impl Searcher {
             if stack[0].score.unwrap().end() {
                 break;
             }
+
+            //check time, if we don't have enough time for next iteration, stop
+            match self.get_time_left() {
+                None => (),
+                Some(duration) => {
+                    if time * 2 > duration {
+                        break;
+                    }
+                }
+            }
         }
 
         match best_move {
@@ -273,6 +283,21 @@ impl Searcher {
         }
     }
 
+    fn get_time_left(&self) -> Option<u64> {
+        let now = SystemTime::now();
+        match self.end_time {
+            Some(et) => {
+                if SystemTime::now() > et {
+                    return Some(0);
+                } else {
+                    let dur = et.duration_since(now).expect("SystemTime::duration_since failed");
+                    return Some(1000 * dur.as_secs() + dur.subsec_millis() as u64);
+                }
+            }
+            None => None,
+        }
+    }
+
     fn is_better_outcome(score: &Option<Outcome>, current_best_score: &Option<Outcome>, active_color: u8,) -> bool {
         if current_best_score.is_none() {
             return true;
@@ -335,7 +360,7 @@ impl Searcher {
         let len = stack[depth].moves.len();
         for i in 0..len {
             let mv = stack[depth].moves[i];
-            if depth > 4 && !mv.is_capture() {
+            if depth > 4 && !(mv.is_capture() || mv.is_promotion()) {
                 //do not examine silent moves after depth 4
                 continue;
             }
@@ -437,7 +462,7 @@ impl Searcher {
                 best_moves[parent_depth].insert(parent_move, child_mv.unwrap());
             }
 
-            //look for alpha beta cutoff opportunities
+            //look for beta cutoff opportunities
             if depth > 1 {
                 if Searcher::is_better_outcome(&stack[depth - 2].score, &stack[depth].score, stack[depth - 2].position.get_active_color()) {
                     stack.pop();
