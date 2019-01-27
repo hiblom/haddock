@@ -9,6 +9,7 @@ pub mod macros;
 
 pub mod global;
 pub mod zobrist;
+pub mod hash_counter;
 pub mod searchtype;
 pub mod command;
 pub mod uci;

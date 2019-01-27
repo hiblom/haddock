@@ -12,13 +12,15 @@ use crate::searchcommand::SearchCommand;
 use crate::searcher::Searcher;
 use crate::move_::Move_;
 use crate::generator::Generator;
+use crate::hash_counter::HashCounter;
 
 pub struct Game {
     receiver: Receiver<InputCommand>,
     position: Option<Position>,
     searcher_handle: Option<thread::JoinHandle<()>>,
     searcher_channel: Option<Sender<SearchCommand>>,
-    stop_signal: Arc<AtomicBool>
+    stop_signal: Arc<AtomicBool>,
+    history: HashCounter
 }
 
 impl<'a> Game {
@@ -28,7 +30,8 @@ impl<'a> Game {
             position: None,
             searcher_handle: None,
             searcher_channel: None,
-            stop_signal: Arc::new(AtomicBool::new(false))
+            stop_signal: Arc::new(AtomicBool::new(false)),
+            history: HashCounter::new()
         }
     }
 
@@ -78,6 +81,7 @@ impl<'a> Game {
                 "startpos" => match parser::parse_startpos() {
                     Some(position) => {
                         self.position = Some(position);
+                        self.history.clear();
                     }
                     None => {
                         println!("Error in startpos FEN");
@@ -99,6 +103,7 @@ impl<'a> Game {
                     match parser::parse_fen(&args_parts[1..max_fen_index]) {
                         Some(position) => {
                             self.position = Some(position);
+                            self.history.clear();
                             i += max_fen_index;
                         }
                         None => {
@@ -114,6 +119,8 @@ impl<'a> Game {
                                 Some(mv) => {
                                     let mv = pos.analyze_move(mv);
                                     if Generator::new(pos).is_legal_move(mv) {
+                                        //todo check 3 fold repetition here
+                                        self.history.incr(pos.get_hash());
                                         pos.apply_move(mv);
                                     }
                                     else {
@@ -285,9 +292,10 @@ impl<'a> Game {
         }
 
         let stop_signal_clone = self.stop_signal.clone();
+        let history_clone = self.history.clone();
 
         self.searcher_handle = Some(thread::spawn(move || {
-            let mut searcher = Searcher::new(receiver_request, position_clone, stop_signal_clone);
+            let mut searcher = Searcher::new(receiver_request, position_clone, stop_signal_clone, history_clone);
             searcher.start();
         }));
 

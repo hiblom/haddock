@@ -15,6 +15,7 @@ use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searchtype::SearchType;
 use crate::moveresult::MoveResult;
+use crate::hash_counter::HashCounter;
 
 pub struct Searcher {
     receiver: Receiver<SearchCommand>,
@@ -23,7 +24,8 @@ pub struct Searcher {
     start_time: Option<SystemTime>,
     end_time: Option<SystemTime>,
     stop_signal: Arc<AtomicBool>,
-    node_count: u32
+    node_count: u32,
+    history: HashCounter
 }
 
 struct StackState {
@@ -36,7 +38,7 @@ struct StackState {
 }
 
 impl Searcher {
-    pub fn new(receiver: Receiver<SearchCommand>, base_position: Position, stop_signal: Arc<AtomicBool>) -> Searcher {
+    pub fn new(receiver: Receiver<SearchCommand>, base_position: Position, stop_signal: Arc<AtomicBool>, history: HashCounter) -> Searcher {
         Searcher {
             receiver: receiver,
             base_position: base_position,
@@ -44,7 +46,8 @@ impl Searcher {
             start_time: None,
             end_time: None,
             stop_signal: stop_signal,
-            node_count: 0
+            node_count: 0,
+            history: history
         }
     }
 
@@ -104,7 +107,6 @@ impl Searcher {
             HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()];
 
         for max_iter_depth in 0..max_depth as usize {
-            //println!("depth iteration {}", max_iter_depth);
             let mut d: usize = 0;
             stack[0].current_index = 0;
             stack[0].score = None;
@@ -127,7 +129,6 @@ impl Searcher {
                 }
 
                 stack[d].current_index += 1;
-                //println!("depth {}, move {} / {}", d, stack[d].current_index, stack[d].moves.len());
                 if stack[d].current_index < stack[d].moves.len() {
                     d = self.progress_stack(&mut stack, d);
                     continue;
@@ -157,13 +158,6 @@ impl Searcher {
                 //update parent best score
                 d = self.regress_stack(&mut stack, &mut best_moves, d);
             }
-
-
-            //let mut hashmap_length = 0;
-            //for hashmap_depth in 0..best_moves.len() {
-            //    hashmap_length += best_moves[hashmap_depth].len();
-            //}
-            //println!("hashmap length: {:?}", hashmap_length);
 
             if self.must_stop() {
                 break;
@@ -345,11 +339,11 @@ impl Searcher {
                 stack[depth].score = score;
                 stack[depth].sub_pv = Some(Vec::new());
 
-                //cutoff
+                //beta cutoff
                 if depth > 0 {
                     let parent_depth = depth - 1;
                     if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
-                        //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
+                        self.history.decr(stack[parent_depth].position.get_hash());
                         stack.pop();
                         return parent_depth;
                     }
@@ -367,13 +361,20 @@ impl Searcher {
             self.node_count += 1;
 
             let score;
+            //self.history.incr(pos.get_hash());
             match generator.try_apply_move(mv) {
                 MoveResult::Next(mut child_pos) => {
-                    if mv.is_capture() {
-                        let (_, square_to) = mv.get_squares();
-                        child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+                    //check 3-fold repetition
+                    if self.history.get(child_pos.get_hash()) >= 2 {
+                        score = Some(Outcome::Draw(depth as i32))
                     }
-                    score = Some(evaluation::evaluate(&child_pos, depth as i32));
+                    else {
+                        if mv.is_capture() {
+                            let (_, square_to) = mv.get_squares();
+                            child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+                        }
+                        score = Some(evaluation::evaluate(&child_pos, depth as i32));
+                    }
                 },
                 MoveResult::Illegal => continue,
                 MoveResult::Draw => score = Some(Outcome::Draw(depth as i32))
@@ -392,7 +393,7 @@ impl Searcher {
                 if depth > 0 {
                     let parent_depth = depth - 1;
                     if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
-                        //println!("move {} was refuted at depth {}", stack[parent_depth].moves[stack[parent_depth].current_index].to_fen(), depth);
+                        self.history.decr(stack[parent_depth].position.get_hash());
                         stack.pop();
                         return parent_depth;
                     }
@@ -410,14 +411,24 @@ impl Searcher {
         let len = stack[depth].moves.len();
         while stack[depth].current_index < len {
             let mv = stack[depth].moves[stack[depth].current_index];
+            self.history.incr(stack[depth].position.get_hash());
             match Generator::new(&stack[depth].position).try_apply_move(mv) {
-                MoveResult::Illegal => stack[depth].current_index += 1,
+                MoveResult::Illegal => {
+                    self.history.decr(stack[depth].position.get_hash());
+                    stack[depth].current_index += 1;
+                }
                 MoveResult::Draw => {
                     stack[depth].score = Some(Outcome::Draw(depth as i32));
                     stack[depth].sub_pv = Some(vec![mv]);
                     break;
                 }
                 MoveResult::Next(p) => {
+                    //check 3-fold repetition
+                    if self.history.get(p.get_hash()) >= 2 {
+                        stack[depth].score = Some(Outcome::Draw(depth as i32));
+                        stack[depth].sub_pv = Some(vec![mv]);
+                        break;
+                    }
                     child_pos = Some(p);
                     break;
                 }
@@ -465,12 +476,15 @@ impl Searcher {
             //look for beta cutoff opportunities
             if depth > 1 {
                 if Searcher::is_better_outcome(&stack[depth - 2].score, &stack[depth].score, stack[depth - 2].position.get_active_color()) {
+                    self.history.decr(stack[parent_depth].position.get_hash());
+                    self.history.decr(stack[depth - 2].position.get_hash());
                     stack.pop();
                     stack.pop();
                     return depth - 2;
                 }
             }
         }
+        self.history.decr(stack[parent_depth].position.get_hash());
         stack.pop();
         depth - 1
     }

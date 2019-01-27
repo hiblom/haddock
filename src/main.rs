@@ -7,6 +7,7 @@ mod macros;
 
 mod global;
 mod zobrist;
+mod hash_counter;
 mod searchtype;
 mod command;
 mod uci;

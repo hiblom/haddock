@@ -161,12 +161,10 @@ impl Position {
 
     fn apply_simple_move(&mut self, square_from: Square, square_to: Square, piece_type: PieceType) {
         self.remove_piece(square_from, piece_type);
-        println!("apply zobrist square piece key {}, {}", square_from.to_usize(), piece_type.to_usize());
         self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_from.to_usize()][piece_type.to_usize()];
         
 
         self.set_piece(square_to, piece_type);
-        println!("apply zobrist square piece key {}, {}", square_to.to_usize(), piece_type.to_usize());
         self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][piece_type.to_usize()];
         
     }
@@ -174,7 +172,6 @@ impl Position {
     fn clear_castling_status(&mut self, index: usize) {
         if self.castling_status[index] {
             self.castling_status[index] = false;
-            println!("apply zobrist castle key {}", index);
             self.hash ^= zobrist::ZOBRIST_CASTLE_KEYS[index];
         }
     }
@@ -193,7 +190,6 @@ impl Position {
             match self.get_piece(square_to) {
                 Some(p) => {
                     self.remove_piece(square_to, p);
-                    println!("apply zobrist square piece key {}, {}", square_to.to_usize(), p.to_usize());
                     self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][p.to_usize()];
                 },
                 None => ()
@@ -211,7 +207,6 @@ impl Position {
             let cap_square = Square::from_xy(x_cap, y_cap);
             let cap_ptype = PieceType::new_pawn(1 - self.active_color);
             self.remove_piece(cap_square, PieceType::new_pawn(1 - self.active_color));
-            println!("apply zobrist square piece key {}, {}", cap_square.to_usize(), cap_ptype.to_usize());
             self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[cap_square.to_usize()][cap_ptype.to_usize()];
         }
 
@@ -220,11 +215,9 @@ impl Position {
             let mut promo_piece = move_.get_promo_piece();
             promo_piece.set_color(self.get_active_color());
             self.remove_piece(square_to, piece);
-            println!("apply zobrist square piece key {}, {}", square_to.to_usize(), piece.to_usize());
             self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][piece.to_usize()];
             
             self.set_piece(square_to, promo_piece);
-            println!("apply zobrist square piece key {}, {}", square_to.to_usize(), promo_piece.to_usize());
             self.hash ^= zobrist::ZOBRIST_SQUARE_PIECE_KEYS[square_to.to_usize()][promo_piece.to_usize()];
             
         }
@@ -314,7 +307,6 @@ impl Position {
         match self.enpassant_square {
             Some(ep_sq) => {
                 let (x, _) = ep_sq.to_xy();
-                println!("apply zobrist ep file key {}", x);
                 self.hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x as usize];
                 self.enpassant_square = None;
             },
@@ -328,12 +320,10 @@ impl Position {
 
             if self.active_color == global::COLOR_WHITE && y_from == 1 && y_to == 3 {
                 self.enpassant_square = Some(Square::from_xy(x_from, 2));
-                println!("apply zobrist ep file key {}", x_from);
                 self.hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x_from as usize];
             }
             else if self.active_color == global::COLOR_BLACK && y_from == 6 && y_to == 4 {
                 self.enpassant_square = Some(Square::from_xy(x_from, 5));
-                println!("apply zobrist ep file key {}", x_from);
                 self.hash ^= zobrist::ZOBRIST_EP_FILE_KEYS[x_from as usize];
             }
         }
@@ -352,7 +342,6 @@ impl Position {
 
         //flip color
         self.active_color = 1 - self.active_color;
-        println!("apply zobrist black key");
         self.hash ^= zobrist::ZOBRIST_BLACK_KEY[0];
         
     }
