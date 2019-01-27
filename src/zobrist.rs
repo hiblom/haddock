@@ -11,7 +11,6 @@ use rand::rngs::StdRng;
 
 lazy_static! {
     pub static ref ZOBRIST_SQUARE_PIECE_KEYS: [[u64; 12]; 64] = {
-        println!("initalizing ZOBRIST_SQUARE_PIECE_KEYS");
         let mut result: [[u64; 12]; 64] = [[0; 12]; 64] ;
         let mut rng: StdRng = SeedableRng::from_seed(seed_str_to_arr(SEED_SQUARE_PIECE_KEYS));
         for i in 0..64 {
@@ -23,13 +22,11 @@ lazy_static! {
     };
 
     pub static ref ZOBRIST_BLACK_KEY: [u64; 1] = {
-        println!("initalizing ZOBRIST_BLACK_KEY");
         let mut rng: StdRng = SeedableRng::from_seed(seed_str_to_arr(SEED_BLACK_KEY));
         [rng.gen::<u64>()]
     };
 
     pub static ref ZOBRIST_CASTLE_KEYS: [u64; 4] = {
-        println!("initalizing ZOBRIST_CASTLE_KEYS");
         let mut result: [u64; 4] = [0; 4];
         let mut rng: StdRng = SeedableRng::from_seed(seed_str_to_arr(SEED_CASTLE_KEYS));
         for i in 0..4 {
@@ -39,7 +36,6 @@ lazy_static! {
     };
 
     pub static ref ZOBRIST_EP_FILE_KEYS: [u64; 8] = {
-        println!("initalizing ZOBRIST_EP_FILE_KEYS");
         let mut result: [u64; 8] = [0; 8];
         let mut rng: StdRng = SeedableRng::from_seed(seed_str_to_arr(SEED_EP_FILE_KEYS));
         for i in 0..8 {

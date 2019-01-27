@@ -8,6 +8,7 @@ extern crate lazy_static;
 pub mod macros;
 
 pub mod global;
+pub mod hash_key_hasher;
 pub mod zobrist;
 pub mod hash_counter;
 pub mod searchtype;

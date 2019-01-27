@@ -6,6 +6,7 @@ extern crate lazy_static;
 mod macros;
 
 mod global;
+mod hash_key_hasher;
 mod zobrist;
 mod hash_counter;
 mod searchtype;

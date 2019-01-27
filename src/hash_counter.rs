@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
+use crate::hash_key_hasher::HashKeyBuildHasher;
+
 #[derive(Clone)]
-pub struct HashCounter(HashMap<u64, i32>);
+pub struct HashCounter(HashMap<u64, i32, HashKeyBuildHasher>);
 
 impl HashCounter {
     pub fn new() -> HashCounter {
-        HashCounter(HashMap::new())
+        HashCounter(HashMap::with_hasher(HashKeyBuildHasher::default()))
     }
 
     pub fn clear(&mut self) {
@@ -39,6 +41,7 @@ impl HashCounter {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_len(&self) -> i32 {
         let mut size = 0;
         for (_, c) in self.0.iter() {
