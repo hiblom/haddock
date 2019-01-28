@@ -15,6 +15,7 @@ use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searchtype::SearchType;
 use crate::moveresult::MoveResult;
+use crate::hash_key_hasher::HashKeyBuildHasher;
 use crate::hash_counter::HashCounter;
 
 pub struct Searcher {
@@ -25,7 +26,8 @@ pub struct Searcher {
     end_time: Option<SystemTime>,
     stop_signal: Arc<AtomicBool>,
     node_count: u32,
-    history: HashCounter
+    history: HashCounter,
+    killer_moves: HashMap<u64, Move_, HashKeyBuildHasher>
 }
 
 struct StackState {
@@ -47,7 +49,8 @@ impl Searcher {
             end_time: None,
             stop_signal: stop_signal,
             node_count: 0,
-            history: history
+            history: history,
+            killer_moves: HashMap::default()
         }
     }
 
@@ -101,10 +104,8 @@ impl Searcher {
 
         let mut best_move: Option<Move_> = None;
         
-        //vector of hashmap to keep the best moves and refutes in, starting at level 1
-        let mut best_moves: Vec<HashMap<Move_, Move_>> = vec![
-            HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(),
-            HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()];
+        //hashmap to keep the best moves and refutes in aka killer moves
+        self.killer_moves = HashMap::default();
 
         for max_iter_depth in 0..max_depth as usize {
             let mut d: usize = 0;
@@ -118,10 +119,10 @@ impl Searcher {
                     if d == 0 {
                         self.sort_first_stack_moves(&mut stack, &best_move);
                     } else {
-                        self.sort_stack_moves(&mut stack, &best_moves, d);
+                        self.sort_stack_moves(&mut stack, d);
                     }
                     if d == max_iter_depth {
-                        d = self.evaluate_stack_moves(&mut stack, &mut best_moves, d);
+                        d = self.evaluate_stack_moves(&mut stack, d);
                     } else {
                         d = self.progress_stack(&mut stack, d);
                     }
@@ -156,7 +157,7 @@ impl Searcher {
                 }
 
                 //update parent best score
-                d = self.regress_stack(&mut stack, &mut best_moves, d);
+                d = self.regress_stack(&mut stack, d);
             }
 
             if self.must_stop() {
@@ -327,7 +328,7 @@ impl Searcher {
         stack[depth].moves_set = true;
     }
 
-    fn evaluate_stack_moves(&mut self, stack: &mut Vec<StackState>, best_moves: &mut Vec<HashMap<Move_, Move_>>, depth: usize) -> usize {
+    fn evaluate_stack_moves(&mut self, stack: &mut Vec<StackState>, depth: usize) -> usize {
         let pos = stack[depth].position;
         let color = pos.get_active_color();
         let generator = Generator::new(&pos);
@@ -384,9 +385,8 @@ impl Searcher {
                 stack[depth].score = score;
                 stack[depth].sub_pv = Some(vec![mv]);
 
-                if depth >= 1 && depth <= 10 {
-                    let parent_depth = depth - 1;
-                    best_moves[parent_depth].insert(stack[parent_depth].moves[stack[parent_depth].current_index], mv);
+                if depth >= 1 {
+                    self.killer_moves.insert(pos.get_hash(), mv);
                 }
 
                 //cutoff
@@ -452,7 +452,7 @@ impl Searcher {
         depth + 1
     }
 
-    fn regress_stack(&mut self, stack: &mut Vec<StackState>, best_moves: &mut Vec<HashMap<Move_, Move_>>, depth: usize) -> usize {
+    fn regress_stack(&mut self, stack: &mut Vec<StackState>, depth: usize) -> usize {
         let parent_depth = depth - 1;
         if Searcher::is_better_outcome(&stack[depth].score, &stack[parent_depth].score, stack[parent_depth].position.get_active_color()) {
             stack[parent_depth].score = stack[depth].score;
@@ -469,8 +469,8 @@ impl Searcher {
             }
             stack[parent_depth].sub_pv = Some(parent_v);
 
-            if (depth >= 1 && depth <= 10) && child_mv.is_some() {
-                best_moves[parent_depth].insert(parent_move, child_mv.unwrap());
+            if depth >= 1 && child_mv.is_some() {
+                self.killer_moves.insert(stack[parent_depth].position.get_hash(), child_mv.unwrap());
             }
 
             //look for beta cutoff opportunities
@@ -498,17 +498,19 @@ impl Searcher {
         }
     }
 
-    fn sort_stack_moves(&mut self, stack: &mut Vec<StackState>, best_moves: &Vec<HashMap<Move_, Move_>>, depth: usize) {
+    fn sort_stack_moves(&mut self, stack: &mut Vec<StackState>, depth: usize) {
         let parent_depth = depth - 1;
-        let parent_move = stack[parent_depth].moves[stack[parent_depth].current_index];
+        let hash =  stack[parent_depth].position.get_hash();
 
-         if !best_moves[parent_depth].contains_key(&parent_move) {
+        if !self.killer_moves.contains_key(&hash) {
             return
         }
 
-        if let Some(p) = stack[depth].moves.iter().position(|&m| m == best_moves[parent_depth][&parent_move]) {
+        let killer_move = self.killer_moves[&hash];
+
+        if let Some(p) = stack[depth].moves.iter().position(|&m| m == killer_move) {
             stack[depth].moves.remove(p);
-            stack[depth].moves.insert(0, best_moves[parent_depth][&parent_move]);
+            stack[depth].moves.insert(0, killer_move);
         }
 
     }
