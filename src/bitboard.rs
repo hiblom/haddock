@@ -12,8 +12,7 @@ const A_FILE: u64 = 0x0101010101010101;
 const H_FILE: u64 = 0x8080808080808080;
 const LS_BIT: u64 = 0x0000000000000001;
 const MS_BIT: u64 = 0x8000000000000000;
-
-
+const PAWN_START_RANKS: u64 = 0x00FF00000000FF00;
 
 #[derive(Clone, Copy, Eq, Hash)]
 pub struct BitBoard(u64);
@@ -21,6 +20,10 @@ pub struct BitBoard(u64);
 impl BitBoard {
     pub fn new() -> BitBoard {
         BitBoard(0)
+    }
+
+    pub fn pawn_start_ranks_board() -> BitBoard {
+        BitBoard(PAWN_START_RANKS)
     }
 
     pub fn from_square(square: Square) -> BitBoard {
@@ -87,7 +90,6 @@ impl BitBoard {
         Square::new(self.0.trailing_zeros() as u8)
     }
 
-    #[allow(dead_code)]
     pub fn get_count(self) -> u32 {
         self.0.count_ones()
     }

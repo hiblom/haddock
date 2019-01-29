@@ -69,6 +69,22 @@ impl Position {
         result
     }
 
+    pub fn get_active_color_pieces_no_pawns(&self) -> Vec<(PieceType, Square)> {
+        let mut result: Vec<(PieceType, Square)> = Vec::new();
+        for piece_value in (self.active_color + 2..12).step_by(2) {
+            let squares = self.bit_boards[piece_value as usize].get_squares();
+            for square in squares {
+                result.push((PieceType::new(piece_value), square));
+            }
+            
+        }
+        result
+    }
+
+    pub fn get_active_color_pawn_board(&self) -> BitBoard {
+        self.bit_boards[self.active_color as usize]
+    }
+
     pub fn get_all_active_pieces(&self) -> Vec<(PieceType, Square)> {
         let mut result: Vec<(PieceType, Square)> = Vec::new();
         for piece_value in 0..12 {

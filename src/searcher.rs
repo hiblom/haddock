@@ -18,6 +18,15 @@ use crate::moveresult::MoveResult;
 use crate::hash_key_hasher::HashKeyBuildHasher;
 use crate::hash_counter::HashCounter;
 
+struct PathNode {
+    position: Position,
+    moves: Vec<Move_>,
+    moves_set: bool,
+    current_index: usize,
+    score: Option<Outcome>,
+    sub_pv: Option<Vec<Move_>>
+}
+
 pub struct Searcher {
     receiver: Receiver<SearchCommand>,
     base_position: Position,
@@ -25,18 +34,10 @@ pub struct Searcher {
     start_time: Option<SystemTime>,
     end_time: Option<SystemTime>,
     stop_signal: Arc<AtomicBool>,
+    path: Vec<PathNode>,
     node_count: u32,
     history: HashCounter,
     killer_moves: HashMap<u64, Move_, HashKeyBuildHasher>
-}
-
-struct StackState {
-    position: Position,
-    moves: Vec<Move_>,
-    moves_set: bool,
-    current_index: usize,
-    score: Option<Outcome>,
-    sub_pv: Option<Vec<Move_>>
 }
 
 impl Searcher {
@@ -48,6 +49,7 @@ impl Searcher {
             start_time: None,
             end_time: None,
             stop_signal: stop_signal,
+            path: Vec::new(),
             node_count: 0,
             history: history,
             killer_moves: HashMap::default()
@@ -92,9 +94,9 @@ impl Searcher {
 
         let current_pos = self.base_position.clone();
 
-        let mut stack: Vec<StackState> = Vec::new();
+        self.path = Vec::new();
 
-        stack.push( StackState { 
+        self.path.push( PathNode { 
             position: current_pos, 
             moves: Vec::new(),
             moves_set: false,
@@ -104,50 +106,49 @@ impl Searcher {
 
         let mut best_move: Option<Move_> = None;
         
-        //hashmap to keep the best moves and refutes in aka killer moves
         self.killer_moves = HashMap::default();
 
         for max_iter_depth in 0..max_depth as usize {
             let mut d: usize = 0;
-            stack[0].current_index = 0;
-            stack[0].score = None;
-            stack[0].sub_pv = None;
+            self.path[0].current_index = 0;
+            self.path[0].score = None;
+            self.path[0].sub_pv = None;
 
             while !self.must_stop() {
-                if !stack[d].moves_set {
-                    self.get_stack_moves(&mut stack, d);
+                if !self.path[d].moves_set {
+                    self.get_stack_moves(d);
                     if d == 0 {
-                        self.sort_first_stack_moves(&mut stack, &best_move);
+                        self.sort_first_stack_moves(&best_move);
                     } else {
-                        self.sort_stack_moves(&mut stack, d);
+                        self.sort_stack_moves(d);
                     }
                     if d == max_iter_depth {
-                        d = self.evaluate_stack_moves(&mut stack, d);
+                        d = self.evaluate_stack_moves(d);
                     } else {
-                        d = self.progress_stack(&mut stack, d);
+                        d = self.progress_stack(d);
                     }
                     continue;
                 }
 
-                stack[d].current_index += 1;
-                if stack[d].current_index < stack[d].moves.len() {
-                    d = self.progress_stack(&mut stack, d);
+                self.path[d].current_index += 1;
+                if self.path[d].current_index < self.path[d].moves.len() {
+                    d = self.progress_stack(d);
                     continue;
                 }
 
                 //(check/stale)mate
-                if stack[d].score.is_none() {
+                if self.path[d].score.is_none() {
                     //check mate or stale mate
-                    let color = stack[d].position.get_active_color();
+                    let color = self.path[d].position.get_active_color();
                     //let score: Option<Outcome>;
-                    if Generator::new(&stack[d].position).is_check(color) {
+                    if Generator::new(&self.path[d].position).is_check(color) {
                         if color == global::COLOR_WHITE {
-                            stack[d].score = Some(Outcome::WhiteIsMate(d as i32));
+                            self.path[d].score = Some(Outcome::WhiteIsMate(d as i32));
                         } else {
-                            stack[d].score = Some(Outcome::BlackIsMate(d as i32));
+                            self.path[d].score = Some(Outcome::BlackIsMate(d as i32));
                         }
                     } else {
-                        stack[d].score = Some(Outcome::Draw(d as i32));
+                        self.path[d].score = Some(Outcome::Draw(d as i32));
                     }
                 }
 
@@ -157,7 +158,7 @@ impl Searcher {
                 }
 
                 //update parent best score
-                d = self.regress_stack(&mut stack, d);
+                d = self.regress_stack(d);
             }
 
             println!("killer move map size: {}", self.killer_moves.len());
@@ -166,7 +167,7 @@ impl Searcher {
                 break;
             }
 
-            if stack[0].score.is_none() || stack[0].sub_pv.is_none() {
+            if self.path[0].score.is_none() || self.path[0].sub_pv.is_none() {
                 break;
             }
 
@@ -176,8 +177,8 @@ impl Searcher {
                 nps = nps * 1000 / time;
             }
 
-            let uci_score = stack[0].score.unwrap().to_uci_score(current_pos.get_active_color());
-            let pv = stack[0].sub_pv.take().unwrap();
+            let uci_score = self.path[0].score.unwrap().to_uci_score(current_pos.get_active_color());
+            let pv = self.path[0].sub_pv.take().unwrap();
             let pv_string = Searcher::get_moves_string(&pv);
 
             println!(
@@ -185,7 +186,7 @@ impl Searcher {
                 max_iter_depth + 1, uci_score, time, self.node_count, nps, pv_string
             );
             best_move = Some(pv[0]);
-            if stack[0].score.unwrap().end() {
+            if self.path[0].score.unwrap().end() {
                 break;
             }
 
@@ -199,6 +200,8 @@ impl Searcher {
                 }
             }
         }
+
+        self.killer_moves = HashMap::default(); //clean up
 
         match best_move {
             Some(m) => return m,
@@ -284,7 +287,7 @@ impl Searcher {
         let now = SystemTime::now();
         match self.end_time {
             Some(et) => {
-                if SystemTime::now() > et {
+                if now > et {
                     return Some(0);
                 } else {
                     let dur = et.duration_since(now).expect("SystemTime::duration_since failed");
@@ -322,41 +325,41 @@ impl Searcher {
         moves_string
     }
 
-    fn get_stack_moves(&mut self, stack: &mut Vec<StackState>, depth: usize) {
-        let pos = stack[depth].position;
+    fn get_stack_moves(&mut self, depth: usize) {
+        let pos = self.path[depth].position;
         let generator = Generator::new(&pos);
         let moves = generator.generate_moves();
-        stack[depth].moves = moves;
-        stack[depth].moves_set = true;
+        self.path[depth].moves = moves;
+        self.path[depth].moves_set = true;
     }
 
-    fn evaluate_stack_moves(&mut self, stack: &mut Vec<StackState>, depth: usize) -> usize {
-        let pos = stack[depth].position;
+    fn evaluate_stack_moves(&mut self, depth: usize) -> usize {
+        let pos = self.path[depth].position;
         let color = pos.get_active_color();
         let generator = Generator::new(&pos);
 
         //examine "null move"
         if depth > 4 {
             let score = Some(evaluation::evaluate(&pos, depth as i32));
-            if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
+            if Searcher::is_better_outcome(&score, &self.path[depth].score, color) {
                 let parent_depth = depth - 1;
-                stack[depth].score = score;
-                stack[depth].sub_pv = Some(Vec::new());
+                self.path[depth].score = score;
+                self.path[depth].sub_pv = Some(Vec::new());
 
                 //beta cutoff
                 if depth > 0 {
-                    if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
-                        self.history.decr(stack[parent_depth].position.get_hash());
-                        stack.pop();
+                    if Searcher::is_better_outcome(&self.path[parent_depth].score, &score, 1 - color) {
+                        self.history.decr(self.path[parent_depth].position.get_hash());
+                        self.path.pop();
                         return parent_depth;
                     }
                 }
             }
         }
 
-        let len = stack[depth].moves.len();
+        let len = self.path[depth].moves.len();
         for i in 0..len {
-            let mv = stack[depth].moves[i];
+            let mv = self.path[depth].moves[i];
             if depth > 4 && !(mv.is_capture() || mv.is_promotion()) {
                 //do not examine silent moves after depth 4
                 continue;
@@ -376,45 +379,45 @@ impl Searcher {
                 MoveResult::Draw => score = Some(Outcome::Draw(depth as i32))
             }
 
-            if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
-                stack[depth].score = score;
-                stack[depth].sub_pv = Some(vec![mv]);
+            if Searcher::is_better_outcome(&score, &self.path[depth].score, color) {
+                self.path[depth].score = score;
+                self.path[depth].sub_pv = Some(vec![mv]);
 
                 //cutoff
                 if depth > 0 {
                     self.killer_moves.insert(pos.get_hash(), mv);
                     let parent_depth = depth - 1;
-                    if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
-                        self.history.decr(stack[parent_depth].position.get_hash());
-                        stack.pop();
+                    if Searcher::is_better_outcome(&self.path[parent_depth].score, &score, 1 - color) {
+                        self.history.decr(self.path[parent_depth].position.get_hash());
+                        self.path.pop();
                         return parent_depth;
                     }
                 }
             }
         }
 
-        stack[depth].current_index = stack[depth].moves.len() - 1;
+        self.path[depth].current_index = self.path[depth].moves.len() - 1;
         depth
     }
 
-    fn progress_stack(&mut self, stack: &mut Vec<StackState>, depth: usize) -> usize {
+    fn progress_stack(&mut self, depth: usize) -> usize {
         let mut child_pos: Option<Position> = None;
 
-        let len = stack[depth].moves.len();
-        while stack[depth].current_index < len {
-            let mv = stack[depth].moves[stack[depth].current_index];
-            match Generator::new(&stack[depth].position).try_apply_move(mv, &self.history) {
+        let len = self.path[depth].moves.len();
+        while self.path[depth].current_index < len {
+            let mv = self.path[depth].moves[self.path[depth].current_index];
+            match Generator::new(&self.path[depth].position).try_apply_move(mv, &self.history) {
                 MoveResult::Illegal => {
-                    stack[depth].current_index += 1;
+                    self.path[depth].current_index += 1;
                 }
                 MoveResult::Draw => {
-                    self.history.incr(stack[depth].position.get_hash());
-                    stack[depth].score = Some(Outcome::Draw(depth as i32));
-                    stack[depth].sub_pv = Some(vec![mv]);
+                    self.history.incr(self.path[depth].position.get_hash());
+                    self.path[depth].score = Some(Outcome::Draw(depth as i32));
+                    self.path[depth].sub_pv = Some(vec![mv]);
                     break;
                 }
                 MoveResult::Next(p) => {
-                    self.history.incr(stack[depth].position.get_hash());
+                    self.history.incr(self.path[depth].position.get_hash());
                     child_pos = Some(p);
                     break;
                 }
@@ -425,7 +428,7 @@ impl Searcher {
             return depth;
         }
 
-        stack.push(StackState {
+        self.path.push(PathNode {
             position: child_pos.unwrap(),
             moves: Vec::new(),
             moves_set: false,
@@ -438,59 +441,59 @@ impl Searcher {
         depth + 1
     }
 
-    fn regress_stack(&mut self, stack: &mut Vec<StackState>, depth: usize) -> usize {
+    fn regress_stack(&mut self, depth: usize) -> usize {
         let parent_depth = depth - 1;
-        if Searcher::is_better_outcome(&stack[depth].score, &stack[parent_depth].score, stack[parent_depth].position.get_active_color()) {
-            stack[parent_depth].score = stack[depth].score;
+        if Searcher::is_better_outcome(&self.path[depth].score, &self.path[parent_depth].score, self.path[parent_depth].position.get_active_color()) {
+            self.path[parent_depth].score = self.path[depth].score;
             
             let mut parent_v = Vec::new();
-            let parent_move = stack[parent_depth].moves[stack[parent_depth].current_index];
+            let parent_move = self.path[parent_depth].moves[self.path[parent_depth].current_index];
             parent_v.push(parent_move);
             let mut child_mv: Option<Move_> = None;
-            if let Some(mut child_v) = stack[depth].sub_pv.take() {
+            if let Some(mut child_v) = self.path[depth].sub_pv.take() {
                 if child_v.len() > 0 {
                     child_mv = Some(child_v[0]);
                 }
                 parent_v.append(&mut child_v);
             }
-            stack[parent_depth].sub_pv = Some(parent_v);
+            self.path[parent_depth].sub_pv = Some(parent_v);
 
             if depth >= 1 && child_mv.is_some() {
-                self.killer_moves.insert(stack[parent_depth].position.get_hash(), child_mv.unwrap());
+                self.killer_moves.insert(self.path[parent_depth].position.get_hash(), child_mv.unwrap());
             }
 
             //look for beta cutoff opportunities
             if depth > 1 {
-                if Searcher::is_better_outcome(&stack[depth - 2].score, &stack[depth].score, stack[depth - 2].position.get_active_color()) {
-                    self.history.decr(stack[parent_depth].position.get_hash());
-                    self.history.decr(stack[depth - 2].position.get_hash());
-                    stack.pop();
-                    stack.pop();
+                if Searcher::is_better_outcome(&self.path[depth - 2].score, &self.path[depth].score, self.path[depth - 2].position.get_active_color()) {
+                    self.history.decr(self.path[parent_depth].position.get_hash());
+                    self.history.decr(self.path[depth - 2].position.get_hash());
+                    self.path.pop();
+                    self.path.pop();
                     return depth - 2;
                 }
             }
         }
-        self.history.decr(stack[parent_depth].position.get_hash());
-        stack.pop();
+        self.history.decr(self.path[parent_depth].position.get_hash());
+        self.path.pop();
         depth - 1
     }
 
-    fn sort_first_stack_moves(&mut self, stack: &mut Vec<StackState>, best_move: &Option<Move_>) {
+    fn sort_first_stack_moves(&mut self, best_move: &Option<Move_>) {
         if let Some(bm) = best_move {
-            if let Some(i) = stack[0].moves.iter().position(|&m| m == *bm) {
-                stack[0].moves.remove(i);
-                stack[0].moves.insert(0, *bm)
+            if let Some(i) = self.path[0].moves.iter().position(|&m| m == *bm) {
+                self.path[0].moves.remove(i);
+                self.path[0].moves.insert(0, *bm)
             }
         }
     }
 
-    fn sort_stack_moves(&mut self, stack: &mut Vec<StackState>, depth: usize) {
-        let hash =  stack[depth - 1].position.get_hash();
+    fn sort_stack_moves(&mut self, depth: usize) {
+        let hash =  self.path[depth - 1].position.get_hash();
 
         if let Some(killer_move) = self.killer_moves.get(&hash) {
-            if let Some(p) = stack[depth].moves.iter().position(|&m| m == *killer_move) {
-                stack[depth].moves.remove(p);
-                stack[depth].moves.insert(0, *killer_move);
+            if let Some(p) = self.path[depth].moves.iter().position(|&m| m == *killer_move) {
+                self.path[depth].moves.remove(p);
+                self.path[depth].moves.insert(0, *killer_move);
             }
         }
     }

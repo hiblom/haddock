@@ -102,13 +102,24 @@ impl<'a> Generator<'a> {
         MoveResult::Next(pos)
     }
 
-    pub fn generate_moves(&self) -> Vec<Move_> {
+    pub fn generate_moves_old(&self) -> Vec<Move_> {
         let mut result: Vec<Move_> = Vec::with_capacity(80);
 
         for (piece_type, square) in self.position.get_active_color_pieces() {
             self.generate_piece_moves(square, piece_type, &mut result);
         }
 
+        result
+    }
+
+    pub fn generate_moves(&self) -> Vec<Move_> {
+        let mut result: Vec<Move_> = Vec::with_capacity(80);
+
+        for (piece_type, square) in self.position.get_active_color_pieces_no_pawns() {
+            self.generate_piece_moves(square, piece_type, &mut result);
+        }
+        self.generate_pawn_moves_2(&mut result);
+        
         result
     }
 
@@ -302,6 +313,127 @@ impl<'a> Generator<'a> {
                         mv.set_castling();
                         moves.push(mv);
                 }
+            }
+        }
+    }
+
+    //generate all pawn moves at once
+    pub fn generate_pawn_moves_2(&self, moves: &mut Vec<Move_>) {
+        let color = self.position.get_active_color();
+
+        let promo_rank: u8;
+        let forward: fn(&mut BitBoard) -> BitBoard;
+        let back: fn(&mut BitBoard) -> BitBoard;
+
+        match color {
+            COLOR_WHITE => {
+                promo_rank = 7;
+                forward = BitBoard::up;
+                back = BitBoard::down;
+            }
+            _ => {
+                promo_rank = 0;
+                forward = BitBoard::down;
+                back = BitBoard::up;
+            }
+        };
+
+        //one square forward
+        let pawn_board = self.position.get_active_color_pawn_board();
+
+        let dest_board = forward(&mut pawn_board.clone()) & !self.all_piece_board; //must be empty
+        let src_board = back(&mut dest_board.clone()); //and back to start pos
+
+        let start_squares = src_board.get_squares();
+        let end_squares = dest_board.get_squares();
+
+        for i in 0..start_squares.len() {
+            let (_, y_to) = end_squares[i].to_xy();
+            let m = Move_::from_squares(start_squares[i], end_squares[i]);
+
+            if y_to == promo_rank {
+                moves.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
+            }
+            else {
+                moves.push(m);
+            }
+        }
+
+        //two squares forward
+        let mut dest_board = pawn_board & BitBoard::pawn_start_ranks_board();
+        dest_board = forward(&mut dest_board) & !self.all_piece_board; //must be empty
+        dest_board = forward(&mut dest_board) & !self.all_piece_board; //must be empty
+        let src_board = back(&mut back(&mut dest_board.clone())); //and back to start pos
+        
+        let start_squares = src_board.get_squares();
+        let end_squares = dest_board.get_squares();
+        
+        for i in 0..start_squares.len() {
+            let m = Move_::from_squares(start_squares[i], end_squares[i]);
+            moves.push(m);
+        }
+
+        //create board from opp board and EP square
+        
+        let mut ep_board = BitBoard::new();
+        match self.position.get_enpassant_square() {
+            Some(eq_sq) => ep_board = BitBoard::from_square(eq_sq),
+            None => ()
+        }
+        let cap_board = self.opp_piece_board | ep_board;
+
+        //capture left
+        let dest_board = forward(&mut pawn_board.clone().left()) & cap_board; //must have opponent
+        let src_board = back(&mut dest_board.clone()).right(); //and back to start pos
+
+        let start_squares = src_board.get_squares();
+        let end_squares = dest_board.get_squares();
+
+        for i in 0..start_squares.len() {
+            let (_, y_to) = end_squares[i].to_xy();
+            let mut m = Move_::from_squares(start_squares[i], end_squares[i]);
+            m.set_capture();
+            if ep_board.not_empty() && ep_board == BitBoard::from_square(end_squares[i]) {
+                m.set_enpassant();
+            }
+
+            if y_to == promo_rank {
+                moves.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
+            }
+            else {
+                moves.push(m);
+            }
+        }
+
+        //capture right
+        let dest_board = forward(&mut pawn_board.clone().right()) & cap_board; //must have opponent
+        let src_board = back(&mut dest_board.clone()).left(); //and back to start pos
+
+        let start_squares = src_board.get_squares();
+        let end_squares = dest_board.get_squares();
+
+        for i in 0..start_squares.len() {
+            let (_, y_to) = end_squares[i].to_xy();
+            let mut m = Move_::from_squares(start_squares[i], end_squares[i]);
+            m.set_capture();
+            if ep_board.not_empty() && ep_board == BitBoard::from_square(end_squares[i]) {
+                m.set_enpassant();
+            }
+
+            if y_to == promo_rank {
+                moves.push(Move_::create_promo_copy(m, PieceType::new_queen(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_rook(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_bishop(COLOR_WHITE)));
+                moves.push(Move_::create_promo_copy(m, PieceType::new_knight(COLOR_WHITE)));
+            }
+            else {
+                moves.push(m);
             }
         }
     }
