@@ -9,6 +9,7 @@ use crate::square::Square;
 use crate::moveboard;
 use crate::bitboard::BitBoard;
 use crate::moveresult::MoveResult;
+use crate::hash_counter::HashCounter;
 
 const PAWN_PUSH_MOVEBOARD: [usize; 2] = [moveboard::MOVEBOARD_WHITE_PAWN_PUSH, moveboard::MOVEBOARD_BLACK_PAWN_PUSH];
 const PAWN_CAP_MOVEBOARD: [usize; 2] = [moveboard::MOVEBOARD_WHITE_PAWN_CAP, moveboard::MOVEBOARD_BLACK_PAWN_CAP];
@@ -74,7 +75,7 @@ impl<'a> Generator<'a> {
         false //should never happen
     }
 
-    pub fn try_apply_move(&self, move_: Move_) -> MoveResult {
+    pub fn try_apply_move(&self, move_: Move_, history: &HashCounter) -> MoveResult {
         let color = self.position.get_active_color();
 
         //check castling
@@ -88,8 +89,13 @@ impl<'a> Generator<'a> {
             return MoveResult::Illegal;
         }
 
-        //immediately check for two draw conditions
-        if pos.is_three_fold_repetition() || pos.is_draw_by_halfmoveclock() {
+        //draw by halfmove clock
+        if pos.is_draw_by_halfmoveclock() {
+            return MoveResult::Draw;
+        }
+
+        //draw by 3-fold repetition
+        if history.get(pos.get_hash()) >= 2 {
             return MoveResult::Draw;
         }
 

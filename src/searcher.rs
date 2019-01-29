@@ -160,6 +160,8 @@ impl Searcher {
                 d = self.regress_stack(&mut stack, d);
             }
 
+            println!("killer move map size: {}", self.killer_moves.len());
+
             if self.must_stop() {
                 break;
             }
@@ -337,12 +339,12 @@ impl Searcher {
         if depth > 4 {
             let score = Some(evaluation::evaluate(&pos, depth as i32));
             if Searcher::is_better_outcome(&score, &stack[depth].score, color) {
+                let parent_depth = depth - 1;
                 stack[depth].score = score;
                 stack[depth].sub_pv = Some(Vec::new());
 
                 //beta cutoff
                 if depth > 0 {
-                    let parent_depth = depth - 1;
                     if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
                         self.history.decr(stack[parent_depth].position.get_hash());
                         stack.pop();
@@ -362,20 +364,13 @@ impl Searcher {
             self.node_count += 1;
 
             let score;
-            //self.history.incr(pos.get_hash());
-            match generator.try_apply_move(mv) {
+            match generator.try_apply_move(mv, &self.history) {
                 MoveResult::Next(mut child_pos) => {
-                    //check 3-fold repetition
-                    if self.history.get(child_pos.get_hash()) >= 2 {
-                        score = Some(Outcome::Draw(depth as i32))
+                    if mv.is_capture() {
+                        let (_, square_to) = mv.get_squares();
+                        child_pos = Generator::new(&child_pos).capture_exchange(square_to);
                     }
-                    else {
-                        if mv.is_capture() {
-                            let (_, square_to) = mv.get_squares();
-                            child_pos = Generator::new(&child_pos).capture_exchange(square_to);
-                        }
-                        score = Some(evaluation::evaluate(&child_pos, depth as i32));
-                    }
+                    score = Some(evaluation::evaluate(&child_pos, depth as i32));
                 },
                 MoveResult::Illegal => continue,
                 MoveResult::Draw => score = Some(Outcome::Draw(depth as i32))
@@ -385,12 +380,9 @@ impl Searcher {
                 stack[depth].score = score;
                 stack[depth].sub_pv = Some(vec![mv]);
 
-                if depth >= 1 {
-                    self.killer_moves.insert(pos.get_hash(), mv);
-                }
-
                 //cutoff
                 if depth > 0 {
+                    self.killer_moves.insert(pos.get_hash(), mv);
                     let parent_depth = depth - 1;
                     if Searcher::is_better_outcome(&stack[parent_depth].score, &score, 1 - color) {
                         self.history.decr(stack[parent_depth].position.get_hash());
@@ -411,24 +403,18 @@ impl Searcher {
         let len = stack[depth].moves.len();
         while stack[depth].current_index < len {
             let mv = stack[depth].moves[stack[depth].current_index];
-            self.history.incr(stack[depth].position.get_hash());
-            match Generator::new(&stack[depth].position).try_apply_move(mv) {
+            match Generator::new(&stack[depth].position).try_apply_move(mv, &self.history) {
                 MoveResult::Illegal => {
-                    self.history.decr(stack[depth].position.get_hash());
                     stack[depth].current_index += 1;
                 }
                 MoveResult::Draw => {
+                    self.history.incr(stack[depth].position.get_hash());
                     stack[depth].score = Some(Outcome::Draw(depth as i32));
                     stack[depth].sub_pv = Some(vec![mv]);
                     break;
                 }
                 MoveResult::Next(p) => {
-                    //check 3-fold repetition
-                    if self.history.get(p.get_hash()) >= 2 {
-                        stack[depth].score = Some(Outcome::Draw(depth as i32));
-                        stack[depth].sub_pv = Some(vec![mv]);
-                        break;
-                    }
+                    self.history.incr(stack[depth].position.get_hash());
                     child_pos = Some(p);
                     break;
                 }
@@ -499,19 +485,13 @@ impl Searcher {
     }
 
     fn sort_stack_moves(&mut self, stack: &mut Vec<StackState>, depth: usize) {
-        let parent_depth = depth - 1;
-        let hash =  stack[parent_depth].position.get_hash();
+        let hash =  stack[depth - 1].position.get_hash();
 
-        if !self.killer_moves.contains_key(&hash) {
-            return
+        if let Some(killer_move) = self.killer_moves.get(&hash) {
+            if let Some(p) = stack[depth].moves.iter().position(|&m| m == *killer_move) {
+                stack[depth].moves.remove(p);
+                stack[depth].moves.insert(0, *killer_move);
+            }
         }
-
-        let killer_move = self.killer_moves[&hash];
-
-        if let Some(p) = stack[depth].moves.iter().position(|&m| m == killer_move) {
-            stack[depth].moves.remove(p);
-            stack[depth].moves.insert(0, killer_move);
-        }
-
     }
 }
