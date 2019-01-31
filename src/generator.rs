@@ -102,6 +102,7 @@ impl<'a> Generator<'a> {
         MoveResult::Next(pos)
     }
 
+    #[allow(dead_code)]
     pub fn generate_moves_old(&self) -> Vec<Move_> {
         let mut result: Vec<Move_> = Vec::with_capacity(80);
 
