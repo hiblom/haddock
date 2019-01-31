@@ -28,5 +28,6 @@ pub mod outcome;
 pub mod evaluation;
 pub mod bitboard;
 pub mod moveboard;
+pub mod transposition_table;
 
 mod tests;

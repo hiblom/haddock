@@ -26,7 +26,7 @@ mod outcome;
 mod evaluation;
 mod bitboard;
 mod moveboard;
-
+mod transposition_table;
 
 use std::io;
 use std::sync::mpsc::{Sender, Receiver};

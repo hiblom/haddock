@@ -1,6 +1,5 @@
 extern crate rand;
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
@@ -15,8 +14,8 @@ use crate::position::Position;
 use crate::searchcommand::SearchCommand;
 use crate::searchtype::SearchType;
 use crate::moveresult::MoveResult;
-use crate::hash_key_hasher::HashKeyBuildHasher;
 use crate::hash_counter::HashCounter;
+use crate::transposition_table::{TranspositionTable, TranspositionTableEntry};
 
 struct PathNode {
     position: Position,
@@ -37,22 +36,22 @@ pub struct Searcher {
     path: Vec<PathNode>,
     node_count: u32,
     history: HashCounter,
-    killer_moves: HashMap<u64, Move_, HashKeyBuildHasher>
+    transposition_table: TranspositionTable
 }
 
 impl Searcher {
     pub fn new(receiver: Receiver<SearchCommand>, base_position: Position, stop_signal: Arc<AtomicBool>, history: HashCounter) -> Searcher {
         Searcher {
-            receiver: receiver,
-            base_position: base_position,
+            receiver,
+            base_position,
             search_type: None,
             start_time: None,
             end_time: None,
-            stop_signal: stop_signal,
+            stop_signal,
             path: Vec::new(),
             node_count: 0,
-            history: history,
-            killer_moves: HashMap::default()
+            history,
+            transposition_table: TranspositionTable::new()
         }
     }
 
@@ -106,7 +105,7 @@ impl Searcher {
 
         let mut best_move: Option<Move_> = None;
         
-        self.killer_moves = HashMap::default();
+        self.transposition_table = TranspositionTable::new();
 
         for max_iter_depth in 0..max_depth as usize {
             let mut d: usize = 0;
@@ -161,7 +160,7 @@ impl Searcher {
                 d = self.regress_stack(d);
             }
 
-            println!("killer move map size: {}", self.killer_moves.len());
+            println!("killer move map size: {}", self.transposition_table.len());
 
             if self.must_stop() {
                 break;
@@ -201,7 +200,7 @@ impl Searcher {
             }
         }
 
-        self.killer_moves = HashMap::default(); //clean up
+        self.transposition_table = TranspositionTable::new(); //clean up
 
         match best_move {
             Some(m) => return m,
@@ -385,7 +384,8 @@ impl Searcher {
 
                 //cutoff
                 if depth > 0 {
-                    self.killer_moves.insert(pos.get_hash(), mv);
+                    let entry = TranspositionTableEntry{ best_move : mv, outcome : None };
+                    self.transposition_table.insert(pos.get_hash(), entry);
                     let parent_depth = depth - 1;
                     if Searcher::is_better_outcome(&self.path[parent_depth].score, &score, 1 - color) {
                         self.history.decr(self.path[parent_depth].position.get_hash());
@@ -459,7 +459,8 @@ impl Searcher {
             self.path[parent_depth].sub_pv = Some(parent_v);
 
             if depth >= 1 && child_mv.is_some() {
-                self.killer_moves.insert(self.path[parent_depth].position.get_hash(), child_mv.unwrap());
+                let entry = TranspositionTableEntry{ best_move : child_mv.unwrap(), outcome : None };
+                self.transposition_table.insert(self.path[parent_depth].position.get_hash(), entry);
             }
 
             //look for beta cutoff opportunities
@@ -490,10 +491,10 @@ impl Searcher {
     fn sort_stack_moves(&mut self, depth: usize) {
         let hash =  self.path[depth - 1].position.get_hash();
 
-        if let Some(killer_move) = self.killer_moves.get(&hash) {
-            if let Some(p) = self.path[depth].moves.iter().position(|&m| m == *killer_move) {
+        if let Some(entry) = self.transposition_table.get(hash) {
+            if let Some(p) = self.path[depth].moves.iter().position(|&m| m == entry.best_move) {
                 self.path[depth].moves.remove(p);
-                self.path[depth].moves.insert(0, *killer_move);
+                self.path[depth].moves.insert(0, entry.best_move);
             }
         }
     }
