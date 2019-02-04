@@ -15,16 +15,7 @@ use crate::searchcommand::SearchCommand;
 use crate::searchtype::SearchType;
 use crate::moveresult::MoveResult;
 use crate::hash_counter::HashCounter;
-use crate::transposition_table::{TranspositionTable, TranspositionTableEntry};
-
-struct PathNode {
-    position: Position,
-    moves: Vec<Move_>,
-    moves_set: bool,
-    current_index: usize,
-    score: Option<Outcome>,
-    sub_pv: Option<Vec<Move_>>
-}
+use crate::transposition_table::TranspositionTable;
 
 pub struct Searcher {
     receiver: Receiver<SearchCommand>,
@@ -33,11 +24,23 @@ pub struct Searcher {
     start_time: Option<SystemTime>,
     end_time: Option<SystemTime>,
     stop_signal: Arc<AtomicBool>,
-    path: Vec<PathNode>,
     node_count: u32,
     history: HashCounter,
     transposition_table: TranspositionTable
 }
+
+struct RecursiveSearchRequest {
+    position: Position,
+    depth: usize,
+    max_iter_depth: usize,
+    alphabeta: Option<Outcome>
+}
+
+struct RecursiveSearchResponse {
+    score: Outcome,
+    variant: Vec<Move_>
+}
+
 
 impl Searcher {
     pub fn new(receiver: Receiver<SearchCommand>, base_position: Position, stop_signal: Arc<AtomicBool>, history: HashCounter) -> Searcher {
@@ -48,7 +51,6 @@ impl Searcher {
             start_time: None,
             end_time: None,
             stop_signal,
-            path: Vec::new(),
             node_count: 0,
             history,
             transposition_table: TranspositionTable::new()
@@ -82,131 +84,186 @@ impl Searcher {
             _ => (),
         }
 
-        let best_move = self.search_tree_2(max_depth);
+        let best_move = self.search_tree_3(max_depth);
         println!("bestmove {}", best_move.to_fen());
     }
 
-    fn search_tree_2(&mut self, max_depth: u64) -> Move_ {
+    fn search_tree_3(&mut self, max_depth: u64) -> Move_ {
 
         self.node_count = 0;
         self.set_times();
-
         let current_pos = self.base_position.clone();
 
-        self.path = Vec::new();
-
-        self.path.push( PathNode { 
-            position: current_pos, 
-            moves: Vec::new(),
-            moves_set: false,
-            current_index: 0,
-            score: None,
-            sub_pv: None });
-
         let mut best_move: Option<Move_> = None;
-        
-        self.transposition_table = TranspositionTable::new();
 
-        for max_iter_depth in 0..max_depth as usize {
-            let mut d: usize = 0;
-            self.path[0].current_index = 0;
-            self.path[0].score = None;
-            self.path[0].sub_pv = None;
+        for max_iter_depth in 1..(max_depth + 1) as usize {
 
-            while !self.must_stop() {
-                if !self.path[d].moves_set {
-                    self.get_stack_moves(d);
-                    if d == 0 {
-                        self.sort_first_stack_moves(&best_move);
-                    } else {
-                        self.sort_stack_moves(d);
-                    }
-                    if d == max_iter_depth {
-                        d = self.evaluate_stack_moves(d);
-                    } else {
-                        d = self.progress_stack(d);
-                    }
-                    continue;
-                }
+            let request = RecursiveSearchRequest {
+                position: current_pos,
+                depth: 0,
+                max_iter_depth,
+                alphabeta: None
+            };
 
-                self.path[d].current_index += 1;
-                if self.path[d].current_index < self.path[d].moves.len() {
-                    d = self.progress_stack(d);
-                    continue;
-                }
+            let response_ = self.recursive_search(request);
 
-                //(check/stale)mate
-                if self.path[d].score.is_none() {
-                    //check mate or stale mate
-                    let color = self.path[d].position.get_active_color();
-                    //let score: Option<Outcome>;
-                    if Generator::new(&self.path[d].position).is_check(color) {
-                        if color == global::COLOR_WHITE {
-                            self.path[d].score = Some(Outcome::WhiteIsMate(d as i32));
-                        } else {
-                            self.path[d].score = Some(Outcome::BlackIsMate(d as i32));
-                        }
-                    } else {
-                        self.path[d].score = Some(Outcome::Draw(d as i32));
-                    }
-                }
-
-                //go back a level
-                if d == 0 {
-                    break;
-                }
-
-                //update parent best score
-                d = self.regress_stack(d);
-            }
-
-            println!("killer move map size: {}", self.transposition_table.len());
+            //println!("history table size: {}", self.history.get_len());
+            //println!("tansposition table size: {}", self.transposition_table.len());
 
             if self.must_stop() {
                 break;
             }
 
-            if self.path[0].score.is_none() || self.path[0].sub_pv.is_none() {
-                break;
-            }
+            if let Some(response) = response_ {
+                let time = self.get_time_elapsed_ms();
+                let mut nps = self.node_count as u64;
+                if time > 0 {
+                    nps = nps * 1000 / time;
+                }
 
-            let time = self.get_time_elapsed_ms();
-            let mut nps = self.node_count as u64;
-            if time > 0 {
-                nps = nps * 1000 / time;
-            }
+                let uci_score = response.score.to_uci_score(current_pos.get_active_color());
+                let pv_string = Searcher::get_moves_string(&response.variant);
 
-            let uci_score = self.path[0].score.unwrap().to_uci_score(current_pos.get_active_color());
-            let pv = self.path[0].sub_pv.take().unwrap();
-            let pv_string = Searcher::get_moves_string(&pv);
+                println!(
+                    "info depth {} score {} time {} nodes {} nps {} pv {}",
+                    max_iter_depth, uci_score, time, self.node_count, nps, pv_string
+                );
+                best_move = Some(response.variant[0]);
+                if response.score.end() {
+                    break;
+                }
 
-            println!(
-                "info depth {} score {} time {} nodes {} nps {} pv {}",
-                max_iter_depth + 1, uci_score, time, self.node_count, nps, pv_string
-            );
-            best_move = Some(pv[0]);
-            if self.path[0].score.unwrap().end() {
-                break;
-            }
-
-            //check time, if we don't have enough time for next iteration, stop
-            match self.get_time_left() {
-                None => (),
-                Some(duration) => {
-                    if time * 2 > duration {
-                        break;
+                //check time, if we don't have enough time for next iteration, stop
+                match self.get_time_left() {
+                    None => (),
+                    Some(duration) => {
+                        if time * 2 > duration {
+                            break;
+                        }
                     }
                 }
             }
-        }
 
-        self.transposition_table = TranspositionTable::new(); //clean up
+        }
 
         match best_move {
             Some(m) => return m,
             None => panic!("Best move not found!")
         }
+    }
 
+    fn recursive_search(&mut self, request: RecursiveSearchRequest) -> Option<RecursiveSearchResponse> {
+        if self.must_stop() {
+            return None;
+        }
+
+        if request.depth == request.max_iter_depth {
+            self.node_count += 1;
+            return Some(RecursiveSearchResponse {
+                score: evaluation::evaluate(&request.position, request.depth as i32),
+                variant: Vec::new()
+            });
+        } else {
+            let active_color = request.position.get_active_color();
+            let generator = Generator::new(&request.position);
+
+            let mut current_best_score: Option<Outcome> = None;
+            let mut current_best_variant: Vec<Move_> = Vec::new();
+
+            //TODO examine "null move" -> dangerous in end game / zugzwang positions
+            if request.depth > 3 && request.depth == request.max_iter_depth - 1 {
+                current_best_score = Some(evaluation::evaluate(&request.position, request.depth as i32));
+
+                //aplphabeta cutoff
+                if Searcher::is_better_outcome(&request.alphabeta, &current_best_score, 1 - active_color) {
+                    return Some(RecursiveSearchResponse {
+                        score : current_best_score.unwrap(),
+                        variant: current_best_variant
+                    });
+                }
+            }
+
+            let mut moves = generator.generate_moves();
+
+            //sort moves; killer move first
+            if let Some(mv) = self.transposition_table.get_best_move(request.position.get_hash()) {
+                if let Some(p) = moves.iter().position(|&m| m == mv) {
+                    moves.remove(p);
+                    moves.insert(0, mv);
+                }
+            }
+
+            for mv in moves {
+                if request.depth > 3 && request.depth == request.max_iter_depth - 1 && !(mv.is_capture() || mv.is_promotion()) {
+                    //do not examine silent moves after depth 3
+                    continue;
+                }
+
+                let score: Option<Outcome>;
+                let mut sub_variant: Vec<Move_> = Vec::new();
+
+                match generator.try_apply_move(mv, &self.history) {
+                    MoveResult::Next(mut child_pos) => {
+                        //SEE
+                        if request.depth == (request.max_iter_depth - 1) && mv.is_capture() {
+                            let (_, square_to) = mv.get_squares();
+                            child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+                        }
+                        let child_request = RecursiveSearchRequest {
+                            position: child_pos,
+                            depth: request.depth + 1,
+                            max_iter_depth: request.max_iter_depth,
+                            alphabeta: current_best_score
+                        };
+                        self.history.incr(child_pos.get_hash());
+                        if let Some(child_response) = self.recursive_search(child_request) {
+                            self.history.decr(child_pos.get_hash());
+                            score = Some(child_response.score);
+                            sub_variant = child_response.variant;
+                        } else {
+                            self.history.decr(child_pos.get_hash());
+                            return None;
+                        }
+                    },
+                    MoveResult::Illegal => continue,
+                    MoveResult::Draw => score = Some(Outcome::Draw(request.depth as i32))
+                }
+
+                if Searcher::is_better_outcome(&score, &current_best_score, active_color) {
+                    self.transposition_table.insert_best_move(request.position.get_hash(), mv);
+                    current_best_score = score;
+                    current_best_variant = vec![mv];
+                    current_best_variant.append(&mut sub_variant);
+
+                    //alphabeta cutoff
+                    if Searcher::is_better_outcome(&request.alphabeta, &score, 1 - active_color ) {
+                        return Some(RecursiveSearchResponse {
+                            score : score.unwrap(),
+                            variant: current_best_variant
+                        });
+                    }
+                }
+            }
+
+            //no score means mate or stalemate
+            if current_best_score.is_none() {
+                //check mate or stale mate
+                if generator.is_check(active_color) {
+                    if active_color == global::COLOR_WHITE {
+                        current_best_score = Some(Outcome::WhiteIsMate(request.depth as i32));
+                    } else {
+                        current_best_score = Some(Outcome::BlackIsMate(request.depth as i32));
+                    }
+                } else {
+                    current_best_score = Some(Outcome::Draw(request.depth as i32));
+                }
+            }
+
+            return Some(RecursiveSearchResponse {
+                score : current_best_score.unwrap(),
+                variant: current_best_variant
+            });
+        }
     }
 
     fn set_times(&mut self) {
@@ -261,7 +318,7 @@ impl Searcher {
             }
         }
 
-        println!("Haddock will think for {} ms", result);
+        //println!("Haddock will think for {} ms", result);
         result
     }
 
@@ -322,180 +379,5 @@ impl Searcher {
             moves_string.push_str(&mv.to_fen());
         }
         moves_string
-    }
-
-    fn get_stack_moves(&mut self, depth: usize) {
-        let pos = self.path[depth].position;
-        let generator = Generator::new(&pos);
-        let moves = generator.generate_moves();
-        self.path[depth].moves = moves;
-        self.path[depth].moves_set = true;
-    }
-
-    fn evaluate_stack_moves(&mut self, depth: usize) -> usize {
-        let pos = self.path[depth].position;
-        let color = pos.get_active_color();
-        let generator = Generator::new(&pos);
-
-        //examine "null move"
-        if depth > 4 {
-            let score = Some(evaluation::evaluate(&pos, depth as i32));
-            if Searcher::is_better_outcome(&score, &self.path[depth].score, color) {
-                let parent_depth = depth - 1;
-                self.path[depth].score = score;
-                self.path[depth].sub_pv = Some(Vec::new());
-
-                //beta cutoff
-                if depth > 0 {
-                    if Searcher::is_better_outcome(&self.path[parent_depth].score, &score, 1 - color) {
-                        self.history.decr(self.path[parent_depth].position.get_hash());
-                        self.path.pop();
-                        return parent_depth;
-                    }
-                }
-            }
-        }
-
-        let len = self.path[depth].moves.len();
-        for i in 0..len {
-            let mv = self.path[depth].moves[i];
-            if depth > 4 && !(mv.is_capture() || mv.is_promotion()) {
-                //do not examine silent moves after depth 4
-                continue;
-            }
-            self.node_count += 1;
-
-            let score;
-            match generator.try_apply_move(mv, &self.history) {
-                MoveResult::Next(mut child_pos) => {
-                    if mv.is_capture() {
-                        let (_, square_to) = mv.get_squares();
-                        child_pos = Generator::new(&child_pos).capture_exchange(square_to);
-                    }
-                    score = Some(evaluation::evaluate(&child_pos, depth as i32));
-                },
-                MoveResult::Illegal => continue,
-                MoveResult::Draw => score = Some(Outcome::Draw(depth as i32))
-            }
-
-            if Searcher::is_better_outcome(&score, &self.path[depth].score, color) {
-                self.path[depth].score = score;
-                self.path[depth].sub_pv = Some(vec![mv]);
-
-                //cutoff
-                if depth > 0 {
-                    let entry = TranspositionTableEntry{ best_move : mv, outcome : None };
-                    self.transposition_table.insert(pos.get_hash(), entry);
-                    let parent_depth = depth - 1;
-                    if Searcher::is_better_outcome(&self.path[parent_depth].score, &score, 1 - color) {
-                        self.history.decr(self.path[parent_depth].position.get_hash());
-                        self.path.pop();
-                        return parent_depth;
-                    }
-                }
-            }
-        }
-
-        self.path[depth].current_index = self.path[depth].moves.len() - 1;
-        depth
-    }
-
-    fn progress_stack(&mut self, depth: usize) -> usize {
-        let mut child_pos: Option<Position> = None;
-
-        let len = self.path[depth].moves.len();
-        while self.path[depth].current_index < len {
-            let mv = self.path[depth].moves[self.path[depth].current_index];
-            match Generator::new(&self.path[depth].position).try_apply_move(mv, &self.history) {
-                MoveResult::Illegal => {
-                    self.path[depth].current_index += 1;
-                }
-                MoveResult::Draw => {
-                    self.history.incr(self.path[depth].position.get_hash());
-                    self.path[depth].score = Some(Outcome::Draw(depth as i32));
-                    self.path[depth].sub_pv = Some(vec![mv]);
-                    break;
-                }
-                MoveResult::Next(p) => {
-                    self.history.incr(self.path[depth].position.get_hash());
-                    child_pos = Some(p);
-                    break;
-                }
-            }
-        }
-
-        if child_pos.is_none() {
-            return depth;
-        }
-
-        self.path.push(PathNode {
-            position: child_pos.unwrap(),
-            moves: Vec::new(),
-            moves_set: false,
-            current_index: 0,
-            score: None,
-            sub_pv: None
-        });
-
-
-        depth + 1
-    }
-
-    fn regress_stack(&mut self, depth: usize) -> usize {
-        let parent_depth = depth - 1;
-        if Searcher::is_better_outcome(&self.path[depth].score, &self.path[parent_depth].score, self.path[parent_depth].position.get_active_color()) {
-            self.path[parent_depth].score = self.path[depth].score;
-            
-            let mut parent_v = Vec::new();
-            let parent_move = self.path[parent_depth].moves[self.path[parent_depth].current_index];
-            parent_v.push(parent_move);
-            let mut child_mv: Option<Move_> = None;
-            if let Some(mut child_v) = self.path[depth].sub_pv.take() {
-                if child_v.len() > 0 {
-                    child_mv = Some(child_v[0]);
-                }
-                parent_v.append(&mut child_v);
-            }
-            self.path[parent_depth].sub_pv = Some(parent_v);
-
-            if depth >= 1 && child_mv.is_some() {
-                let entry = TranspositionTableEntry{ best_move : child_mv.unwrap(), outcome : None };
-                self.transposition_table.insert(self.path[parent_depth].position.get_hash(), entry);
-            }
-
-            //look for beta cutoff opportunities
-            if depth > 1 {
-                if Searcher::is_better_outcome(&self.path[depth - 2].score, &self.path[depth].score, self.path[depth - 2].position.get_active_color()) {
-                    self.history.decr(self.path[parent_depth].position.get_hash());
-                    self.history.decr(self.path[depth - 2].position.get_hash());
-                    self.path.pop();
-                    self.path.pop();
-                    return depth - 2;
-                }
-            }
-        }
-        self.history.decr(self.path[parent_depth].position.get_hash());
-        self.path.pop();
-        depth - 1
-    }
-
-    fn sort_first_stack_moves(&mut self, best_move: &Option<Move_>) {
-        if let Some(bm) = best_move {
-            if let Some(i) = self.path[0].moves.iter().position(|&m| m == *bm) {
-                self.path[0].moves.remove(i);
-                self.path[0].moves.insert(0, *bm)
-            }
-        }
-    }
-
-    fn sort_stack_moves(&mut self, depth: usize) {
-        let hash =  self.path[depth - 1].position.get_hash();
-
-        if let Some(entry) = self.transposition_table.get(hash) {
-            if let Some(p) = self.path[depth].moves.iter().position(|&m| m == entry.best_move) {
-                self.path[depth].moves.remove(p);
-                self.path[depth].moves.insert(0, entry.best_move);
-            }
-        }
     }
 }
