@@ -5,6 +5,7 @@ use crate::move_::Move_;
 use crate::outcome::Outcome;
 
 pub struct TranspositionTableEntry {
+    pub horizon: i32,
     pub best_move: Option<Move_>,
     pub outcome: Option<Outcome>
 }
@@ -21,32 +22,38 @@ impl TranspositionTable {
         self.0.len()
     }
 
-    #[allow(dead_code)]
-    pub fn insert(&mut self, hash_key: u64, best_move: Option<Move_>, outcome: Option<Outcome>) {
+    pub fn insert(&mut self, hash_key: u64, horizon: i32, best_move: Option<Move_>, outcome: Option<Outcome>) {
         match self.0.get_mut(&hash_key) {
             Some(e) => {
-                e.best_move = best_move;
-                e.outcome = outcome;
+                if horizon >= e.horizon {
+                    e.horizon = horizon;
+                    e.best_move = best_move;
+                    e.outcome = outcome;
+                }
             },
             None => {
                 self.0.insert(
                     hash_key,
-                    TranspositionTableEntry { best_move, outcome }
+                    TranspositionTableEntry { horizon, best_move, outcome }
                 );
             }
         }
     }
 
     #[allow(dead_code)]
-    pub fn insert_outcome(&mut self, hash_key: u64, outcome: Option<Outcome>) {
+    pub fn insert_outcome(&mut self, hash_key: u64, horizon: i32, outcome: Option<Outcome>) {
         match self.0.get_mut(&hash_key) {
             Some(e) => {
-                e.outcome = outcome;
+                if horizon >= e.horizon {
+                    e.horizon = horizon;
+                    e.outcome = outcome;
+                }
             },
             None => {
                 self.0.insert(
                     hash_key,
                     TranspositionTableEntry {
+                        horizon,
                         best_move: None,
                         outcome
                     }
@@ -55,15 +62,20 @@ impl TranspositionTable {
         }
     }
 
-    pub fn insert_best_move(&mut self, hash_key: u64, mv: Move_) {
+    #[allow(dead_code)]
+    pub fn insert_best_move(&mut self, hash_key: u64, horizon: i32, mv: Move_) {
         match self.0.get_mut(&hash_key) {
             Some(e) => {
-                e.best_move = Some(mv);
+                if horizon >= e.horizon {
+                    e.horizon = horizon;
+                    e.best_move = Some(mv);
+                }
             },
             None => {
                 self.0.insert(
                     hash_key,
                     TranspositionTableEntry {
+                        horizon,
                         best_move: Some(mv),
                         outcome: None
                     }
@@ -72,9 +84,33 @@ impl TranspositionTable {
         }
     }
 
-    //pub fn get(&self, hash_hey: u64) -> Option<&TranspositionTableEntry> {
-    //    self.0.get(&hash_hey)
-    //}
+    #[allow(dead_code)]
+    pub fn get_outcome(&self, hash_key: u64, horizon: i32) -> Option<Outcome> {
+        match self.0.get(&hash_key) {
+            Some(e) => {
+                if e.horizon >= horizon {
+                    return e.outcome;
+                } else {
+                    return None;
+                }
+            },
+            None => None
+        }
+    }
+
+    pub fn get(&self, hash_key: u64, horizon: i32) -> Option<(Move_, Outcome)> {
+        match self.0.get(&hash_key) {
+            Some(e) => {
+                if e.horizon >= horizon  && e.best_move.is_some() && e.outcome.is_some() {
+                    return Some((e.best_move.unwrap(), e.outcome.unwrap()));
+                }
+            },
+            None => {
+                return None;
+            }
+        }
+        None
+    }
 
     pub fn get_best_move(&self, hash_hey: u64) -> Option<Move_> {
         match self.0.get(&hash_hey) {

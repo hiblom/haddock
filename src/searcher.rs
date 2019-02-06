@@ -25,14 +25,15 @@ pub struct Searcher {
     end_time: Option<SystemTime>,
     stop_signal: Arc<AtomicBool>,
     node_count: u32,
+    transposition_count: u32,
     history: HashCounter,
     transposition_table: TranspositionTable
 }
 
-struct RecursiveSearchRequest {
-    position: Position,
+struct RecursiveSearchRequest<'a> {
+    position: &'a Position,
     depth: usize,
-    max_iter_depth: usize,
+    horizon: usize,
     alphabeta: Option<Outcome>
 }
 
@@ -52,6 +53,7 @@ impl Searcher {
             end_time: None,
             stop_signal,
             node_count: 0,
+            transposition_count: 0,
             history,
             transposition_table: TranspositionTable::new()
         }
@@ -99,16 +101,16 @@ impl Searcher {
         for max_iter_depth in 1..(max_depth + 1) as usize {
 
             let request = RecursiveSearchRequest {
-                position: current_pos,
+                position: &current_pos,
                 depth: 0,
-                max_iter_depth,
+                horizon: max_iter_depth,
                 alphabeta: None
             };
 
             let response_ = self.recursive_search(request);
 
             //println!("history table size: {}", self.history.get_len());
-            //println!("tansposition table size: {}", self.transposition_table.len());
+            println!("transposition table size: {}, hits: {}", self.transposition_table.len(), self.transposition_count);
 
             if self.must_stop() {
                 break;
@@ -156,114 +158,130 @@ impl Searcher {
         if self.must_stop() {
             return None;
         }
+        self.node_count += 1;
 
-        if request.depth == request.max_iter_depth {
-            self.node_count += 1;
+        if request.horizon == 0 {
             return Some(RecursiveSearchResponse {
-                score: evaluation::evaluate(&request.position, request.depth as i32),
+                score: evaluation::evaluate(&request.position, request.horizon as i32),
                 variant: Vec::new()
             });
-        } else {
-            let active_color = request.position.get_active_color();
-            let generator = Generator::new(&request.position);
+        }
 
-            let mut current_best_score: Option<Outcome> = None;
-            let mut current_best_variant: Vec<Move_> = Vec::new();
+        //check transposition table
+        if let Some((mv, outcome)) = self.transposition_table.get(request.position.get_hash(), request.horizon as i32) {
+            self.transposition_count += 1;
+            return Some(RecursiveSearchResponse {
+                score: outcome,
+                variant: vec![mv]
+            });
+        }
 
-            //TODO examine "null move" -> dangerous in end game / zugzwang positions
-            if request.depth > 3 && request.depth == request.max_iter_depth - 1 {
-                current_best_score = Some(evaluation::evaluate(&request.position, request.depth as i32));
+        let active_color = request.position.get_active_color();
+        let other_color = 1 - active_color;
+        let generator = Generator::new(&request.position);
 
-                //aplphabeta cutoff
-                if Searcher::is_better_outcome(&request.alphabeta, &current_best_score, 1 - active_color) {
+        let mut current_best_score: Option<Outcome> = None;
+        let mut current_best_variant: Vec<Move_> = Vec::new();
+
+        //TODO examine "null move" -> dangerous in end game / zugzwang positions
+        if request.depth > 3 && request.horizon == 1 {
+            current_best_score = Some(evaluation::evaluate(&request.position, request.horizon as i32));
+
+            //aplphabeta cutoff
+            if Searcher::is_better_outcome(&request.alphabeta, &current_best_score, other_color) {
+                return Some(RecursiveSearchResponse {
+                    score : current_best_score.unwrap(),
+                    variant: current_best_variant
+                });
+            }
+        }
+
+        let mut moves = generator.generate_moves();
+
+        //sort moves; killer move first
+        if let Some(mv) = self.transposition_table.get_best_move(request.position.get_hash()) {
+            if let Some(p) = moves.iter().position(|&m| m == mv) {
+                moves.remove(p);
+                moves.insert(0, mv);
+            }
+        }
+
+        for mv in moves {
+            if request.depth > 3 && request.horizon == 1 && !(mv.is_capture() || mv.is_promotion()) {
+                //do not examine silent moves after depth 3
+                continue;
+            }
+
+            let score: Option<Outcome>;
+            let mut variant: Vec<Move_> = Vec::new();
+
+            match generator.try_apply_move(mv, &self.history) {
+                MoveResult::Next(mut child_pos) => {
+                    //SEE
+                    if request.horizon == 1 && mv.is_capture() {
+                        let (_, square_to) = mv.get_squares();
+                        child_pos = Generator::new(&child_pos).capture_exchange(square_to);
+                    }
+                    let child_request = RecursiveSearchRequest {
+                        position: &child_pos,
+                        depth: request.depth + 1,
+                        horizon: request.horizon - 1,
+                        alphabeta: current_best_score
+                    };
+                    self.history.incr(child_pos.get_hash());
+                    if let Some(child_response) = self.recursive_search(child_request) {
+                        self.history.decr(child_pos.get_hash());
+                        score = Some(child_response.score);
+                        variant = child_response.variant;
+                    } else {
+                        self.history.decr(child_pos.get_hash());
+                        return None;
+                    }
+                },
+                MoveResult::Illegal => continue,
+                MoveResult::Draw => score = Some(Outcome::Draw(request.horizon as i32))
+            }
+
+            if Searcher::is_better_outcome(&score, &current_best_score, active_color) {
+                current_best_score = score;
+                current_best_variant = vec![mv];
+                current_best_variant.append(&mut variant);
+
+                self.transposition_table.insert(
+                    request.position.get_hash(),
+                    request.horizon as i32,
+                    Some(mv),
+                    score
+                );
+
+                //alphabeta cutoff
+                if Searcher::is_better_outcome(&request.alphabeta, &score, other_color) {
                     return Some(RecursiveSearchResponse {
-                        score : current_best_score.unwrap(),
+                        score : score.unwrap(),
                         variant: current_best_variant
                     });
                 }
             }
-
-            let mut moves = generator.generate_moves();
-
-            //sort moves; killer move first
-            if let Some(mv) = self.transposition_table.get_best_move(request.position.get_hash()) {
-                if let Some(p) = moves.iter().position(|&m| m == mv) {
-                    moves.remove(p);
-                    moves.insert(0, mv);
-                }
-            }
-
-            for mv in moves {
-                if request.depth > 3 && request.depth == request.max_iter_depth - 1 && !(mv.is_capture() || mv.is_promotion()) {
-                    //do not examine silent moves after depth 3
-                    continue;
-                }
-
-                let score: Option<Outcome>;
-                let mut sub_variant: Vec<Move_> = Vec::new();
-
-                match generator.try_apply_move(mv, &self.history) {
-                    MoveResult::Next(mut child_pos) => {
-                        //SEE
-                        if request.depth == (request.max_iter_depth - 1) && mv.is_capture() {
-                            let (_, square_to) = mv.get_squares();
-                            child_pos = Generator::new(&child_pos).capture_exchange(square_to);
-                        }
-                        let child_request = RecursiveSearchRequest {
-                            position: child_pos,
-                            depth: request.depth + 1,
-                            max_iter_depth: request.max_iter_depth,
-                            alphabeta: current_best_score
-                        };
-                        self.history.incr(child_pos.get_hash());
-                        if let Some(child_response) = self.recursive_search(child_request) {
-                            self.history.decr(child_pos.get_hash());
-                            score = Some(child_response.score);
-                            sub_variant = child_response.variant;
-                        } else {
-                            self.history.decr(child_pos.get_hash());
-                            return None;
-                        }
-                    },
-                    MoveResult::Illegal => continue,
-                    MoveResult::Draw => score = Some(Outcome::Draw(request.depth as i32))
-                }
-
-                if Searcher::is_better_outcome(&score, &current_best_score, active_color) {
-                    self.transposition_table.insert_best_move(request.position.get_hash(), mv);
-                    current_best_score = score;
-                    current_best_variant = vec![mv];
-                    current_best_variant.append(&mut sub_variant);
-
-                    //alphabeta cutoff
-                    if Searcher::is_better_outcome(&request.alphabeta, &score, 1 - active_color ) {
-                        return Some(RecursiveSearchResponse {
-                            score : score.unwrap(),
-                            variant: current_best_variant
-                        });
-                    }
-                }
-            }
-
-            //no score means mate or stalemate
-            if current_best_score.is_none() {
-                //check mate or stale mate
-                if generator.is_check(active_color) {
-                    if active_color == global::COLOR_WHITE {
-                        current_best_score = Some(Outcome::WhiteIsMate(request.depth as i32));
-                    } else {
-                        current_best_score = Some(Outcome::BlackIsMate(request.depth as i32));
-                    }
-                } else {
-                    current_best_score = Some(Outcome::Draw(request.depth as i32));
-                }
-            }
-
-            return Some(RecursiveSearchResponse {
-                score : current_best_score.unwrap(),
-                variant: current_best_variant
-            });
         }
+
+        //no score means mate or stalemate
+        if current_best_score.is_none() {
+            //check mate or stale mate
+            if generator.is_check(active_color) {
+                if active_color == global::COLOR_WHITE {
+                    current_best_score = Some(Outcome::WhiteIsMate(request.horizon as i32));
+                } else {
+                    current_best_score = Some(Outcome::BlackIsMate(request.horizon as i32));
+                }
+            } else {
+                current_best_score = Some(Outcome::Draw(request.horizon as i32));
+            }
+        }
+
+        return Some(RecursiveSearchResponse {
+            score : current_best_score.unwrap(),
+            variant: current_best_variant
+        });
     }
 
     fn set_times(&mut self) {
@@ -323,6 +341,10 @@ impl Searcher {
     }
 
     fn must_stop(&self) -> bool {
+        if self.node_count & 0xFFFFu32 != 0 {
+            return false;
+        }
+
         if self.stop_signal.load(Ordering::Relaxed) {
             return true;
         }
@@ -355,12 +377,12 @@ impl Searcher {
     }
 
     fn is_better_outcome(score: &Option<Outcome>, current_best_score: &Option<Outcome>, active_color: u8,) -> bool {
-        if current_best_score.is_none() {
-            return true;
-        }
-
         if score.is_none() {
             return false;
+        }
+
+        if current_best_score.is_none() {
+            return true;
         }
 
         if active_color == global::COLOR_WHITE {

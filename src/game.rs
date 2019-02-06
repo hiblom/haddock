@@ -26,7 +26,7 @@ pub struct Game {
 impl<'a> Game {
     pub fn new(receiver: Receiver<InputCommand>) -> Game {
         Game {
-            receiver: receiver,
+            receiver,
             position: None,
             searcher_handle: None,
             searcher_channel: None,
