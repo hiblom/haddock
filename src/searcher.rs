@@ -34,7 +34,7 @@ struct RecursiveSearchRequest<'a> {
     position: &'a Position,
     depth: usize,
     horizon: usize,
-    alphabeta: Option<Outcome>
+    bounds: [Option<Outcome>; 2]
 }
 
 struct RecursiveSearchResponse {
@@ -100,11 +100,13 @@ impl Searcher {
 
         for max_iter_depth in 1..(max_depth + 1) as usize {
 
+           //println!("Searching depth {}", max_iter_depth);
+
             let request = RecursiveSearchRequest {
                 position: &current_pos,
                 depth: 0,
                 horizon: max_iter_depth,
-                alphabeta: None
+                bounds: [None; 2]
             };
 
             let response_ = self.recursive_search(request);
@@ -154,7 +156,9 @@ impl Searcher {
         }
     }
 
-    fn recursive_search(&mut self, request: RecursiveSearchRequest) -> Option<RecursiveSearchResponse> {
+    fn recursive_search(&mut self, mut request: RecursiveSearchRequest) -> Option<RecursiveSearchResponse> {
+        //println!("white bound: {:?}, black bound: {:?}", request.bounds[0], request.bounds[1]);
+
         if self.must_stop() {
             return None;
         }
@@ -167,33 +171,50 @@ impl Searcher {
             });
         }
 
-        //check transposition table
-        if let Some((mv, outcome)) = self.transposition_table.get(request.position.get_hash(), request.horizon as i32) {
-            self.transposition_count += 1;
-            return Some(RecursiveSearchResponse {
-                score: outcome,
-                variant: vec![mv]
-            });
-        }
-
         let active_color = request.position.get_active_color();
         let other_color = 1 - active_color;
-        let generator = Generator::new(&request.position);
 
-        let mut current_best_score: Option<Outcome> = None;
-        let mut current_best_variant: Vec<Move_> = Vec::new();
+        //check transposition table
+        if let Some((mv, score)) = self.transposition_table.get(request.position.get_hash(), request.horizon as i32) {
+            self.transposition_count += 1;
 
-        //TODO examine "null move" -> dangerous in end game / zugzwang positions
-        if request.depth > 3 && request.horizon == 1 {
-            current_best_score = Some(evaluation::evaluate(&request.position, request.horizon as i32));
+            if Searcher::is_better_outcome(&Some(score), &request.bounds[active_color as usize], active_color) {
 
-            //aplphabeta cutoff
-            if Searcher::is_better_outcome(&request.alphabeta, &current_best_score, other_color) {
+                //cutoff
+                if Searcher::is_better_or_equal_outcome(&request.bounds[other_color as usize], &Some(score), other_color) {
+                    return Some(RecursiveSearchResponse {
+                        score : request.bounds[other_color as usize].unwrap(),
+                        variant: Vec::new()
+                    });
+                }
+
                 return Some(RecursiveSearchResponse {
-                    score : current_best_score.unwrap(),
-                    variant: current_best_variant
+                    score,
+                    variant: vec![mv]
                 });
             }
+        }
+
+        let generator = Generator::new(request.position);
+
+        //let mut current_best_score: Option<Outcome> = None;
+        let mut current_best_variant: Vec<Move_> = Vec::new();
+
+        //TODO examine "null move" -> dangerous in end game / zugzwang positions and stalemate
+        if (request.depth > 4) && (request.horizon == 1) {
+            let score = Some(evaluation::evaluate(&request.position, request.horizon as i32));
+
+            if Searcher::is_better_outcome(&score, &request.bounds[active_color as usize], active_color) {
+                //cutoff
+                if Searcher::is_better_or_equal_outcome(&request.bounds[other_color as usize], &score, other_color) {
+                    return Some(RecursiveSearchResponse {
+                        score : request.bounds[other_color as usize].unwrap(),
+                        variant: Vec::new()
+                    });
+                }
+                request.bounds[active_color as usize] = score;
+            }
+
         }
 
         let mut moves = generator.generate_moves();
@@ -206,17 +227,21 @@ impl Searcher {
             }
         }
 
-        for mv in moves {
-            if request.depth > 3 && request.horizon == 1 && !(mv.is_capture() || mv.is_promotion()) {
-                //do not examine silent moves after depth 3
-                continue;
-            }
+        let mut has_valid_moves = false;
 
+        for mv in moves {
             let score: Option<Outcome>;
             let mut variant: Vec<Move_> = Vec::new();
 
+            if has_valid_moves && request.depth > 4 && request.horizon == 1 && !(mv.is_capture() || mv.is_promotion()) {
+                //now we know there are valid moves; do not examine silent moves after depth 3
+                continue;
+            }
+
             match generator.try_apply_move(mv, &self.history) {
                 MoveResult::Next(mut child_pos) => {
+                    has_valid_moves = true;
+
                     //SEE
                     if request.horizon == 1 && mv.is_capture() {
                         let (_, square_to) = mv.get_squares();
@@ -226,7 +251,7 @@ impl Searcher {
                         position: &child_pos,
                         depth: request.depth + 1,
                         horizon: request.horizon - 1,
-                        alphabeta: current_best_score
+                        bounds: request.bounds
                     };
                     self.history.incr(child_pos.get_hash());
                     if let Some(child_response) = self.recursive_search(child_request) {
@@ -239,14 +264,13 @@ impl Searcher {
                     }
                 },
                 MoveResult::Illegal => continue,
-                MoveResult::Draw => score = Some(Outcome::Draw(request.horizon as i32))
+                MoveResult::Draw => {
+                    has_valid_moves = true;
+                    score = Some(Outcome::Draw(request.horizon as i32));
+                }
             }
 
-            if Searcher::is_better_outcome(&score, &current_best_score, active_color) {
-                current_best_score = score;
-                current_best_variant = vec![mv];
-                current_best_variant.append(&mut variant);
-
+            if Searcher::is_better_outcome(&score, &request.bounds[active_color as usize], active_color) {
                 self.transposition_table.insert(
                     request.position.get_hash(),
                     request.horizon as i32,
@@ -254,32 +278,50 @@ impl Searcher {
                     score
                 );
 
-                //alphabeta cutoff
-                if Searcher::is_better_outcome(&request.alphabeta, &score, other_color) {
+                //cutoff
+                if Searcher::is_better_or_equal_outcome(&request.bounds[other_color as usize], &score, other_color) {
+                    //if request.horizon > 1 {
+                    //    println!("alphabeta cutoff, active color: {}, white lbound: {:?}, black ubound: {:?}, score: {:?}", active_color, request.bounds[0], request.bounds[1], score);
+                    //}
                     return Some(RecursiveSearchResponse {
-                        score : score.unwrap(),
-                        variant: current_best_variant
+                        score : request.bounds[other_color as usize].unwrap(),
+                        variant: Vec::new()
                     });
                 }
+
+                current_best_variant = vec![mv];
+                current_best_variant.append(&mut variant);
+                request.bounds[active_color as usize] = score;
             }
         }
 
         //no score means mate or stalemate
-        if current_best_score.is_none() {
+        if !has_valid_moves {
+            let score;
             //check mate or stale mate
             if generator.is_check(active_color) {
                 if active_color == global::COLOR_WHITE {
-                    current_best_score = Some(Outcome::WhiteIsMate(request.horizon as i32));
+                    score = Some(Outcome::WhiteIsMate(request.horizon as i32));
                 } else {
-                    current_best_score = Some(Outcome::BlackIsMate(request.horizon as i32));
+                    score = Some(Outcome::BlackIsMate(request.horizon as i32));
                 }
             } else {
-                current_best_score = Some(Outcome::Draw(request.horizon as i32));
+                score = Some(Outcome::Draw(request.horizon as i32));
+            }
+            if Searcher::is_better_outcome(&score, &request.bounds[active_color as usize], active_color) {
+                //cutoff
+                if Searcher::is_better_or_equal_outcome(&request.bounds[other_color as usize], &score, other_color) {
+                    return Some(RecursiveSearchResponse {
+                        score : request.bounds[other_color as usize].unwrap(),
+                        variant: Vec::new()
+                    });
+                }
+                request.bounds[active_color as usize] = score;
             }
         }
 
         return Some(RecursiveSearchResponse {
-            score : current_best_score.unwrap(),
+            score : request.bounds[active_color as usize].unwrap(),
             variant: current_best_variant
         });
     }
@@ -389,6 +431,22 @@ impl Searcher {
             return score.unwrap() > current_best_score.unwrap();
         } else {
             return score.unwrap() < current_best_score.unwrap();
+        }
+    }
+
+    fn is_better_or_equal_outcome(score: &Option<Outcome>, current_best_score: &Option<Outcome>, active_color: u8,) -> bool {
+        if score.is_none() {
+            return false;
+        }
+
+        if current_best_score.is_none() {
+            return true;
+        }
+
+        if active_color == global::COLOR_WHITE {
+            return score.unwrap() >= current_best_score.unwrap();
+        } else {
+            return score.unwrap() <= current_best_score.unwrap();
         }
     }
 
