@@ -26,9 +26,9 @@ impl<'a> Generator<'a> {
         let own_piece_board = position.get_piece_board(position.get_active_color());
         let opp_piece_board = position.get_piece_board(1 - position.get_active_color());
         Generator { 
-            position: position,
-            own_piece_board: own_piece_board,
-            opp_piece_board: opp_piece_board,
+            position,
+            own_piece_board,
+            opp_piece_board,
             all_piece_board: own_piece_board | opp_piece_board
         }
     }

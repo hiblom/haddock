@@ -27,7 +27,8 @@ pub struct Searcher {
     node_count: u32,
     transposition_count: u32,
     history: HashCounter,
-    transposition_table: TranspositionTable
+    transposition_table: TranspositionTable,
+    actual_bounds: [Option<Outcome>; 2]
 }
 
 struct RecursiveSearchRequest<'a> {
@@ -55,7 +56,8 @@ impl Searcher {
             node_count: 0,
             transposition_count: 0,
             history,
-            transposition_table: TranspositionTable::new()
+            transposition_table: TranspositionTable::new(),
+            actual_bounds: [None; 2]
         }
     }
 
@@ -102,17 +104,87 @@ impl Searcher {
 
            //println!("Searching depth {}", max_iter_depth);
 
-            let request = RecursiveSearchRequest {
-                position: &current_pos,
-                depth: 0,
-                horizon: max_iter_depth,
-                bounds: [None; 2]
-            };
+            //preset bounds/aspiration search
+            let mut bounds: [Option<Outcome>; 2] = [None; 2];
 
-            let response_ = self.recursive_search(request);
+            if max_iter_depth > 2 {
+                if let Some(score) = self.actual_bounds[0] {
+                    bounds[0] = match score {
+                        Outcome::Undecided(d, material_value) => Some(Outcome::Undecided(d, material_value - 25)),
+                        _ => None
+                    }
+                }
+
+                if let Some(score) = self.actual_bounds[1] {
+                    bounds[1] = match score {
+                        Outcome::Undecided(d, material_value) => Some(Outcome::Undecided(d, material_value + 25)),
+                        _ => None
+                    }
+                }
+            }
+
+            let mut response_;
+            loop {
+                println!("starting search with aspiration white lbound: {:?}, black ubound: {:?}", bounds[0], bounds[1]);
+                self.actual_bounds = [None; 2];
+
+                let request = RecursiveSearchRequest {
+                    position: &current_pos,
+                    depth: 0,
+                    horizon: max_iter_depth,
+                    bounds
+                };
+
+                response_ = self.recursive_search(request);
+                if self.must_stop() {
+                    break;
+                }
+
+                println!("actual white lbound: {:?}, black ubound: {:?}", self.actual_bounds[0], self.actual_bounds[1]);
+
+                if max_iter_depth > 2 {
+                    let mut search_again = false;
+
+                    if self.actual_bounds[0].is_none() {
+                        search_again = true;
+                        bounds[0] = match bounds[0] {
+                            Some(Outcome::Undecided(d, material_value)) => Some(Outcome::Undecided(d, material_value - 50)),
+                            _ => None
+                        }
+                    }
+
+                    if self.actual_bounds[1].is_none() {
+                        search_again = true;
+                        bounds[1] = match bounds[1] {
+                            Some(Outcome::Undecided(d, material_value)) => Some(Outcome::Undecided(d, material_value + 50)),
+                            _ => None
+                        }
+                    }
+
+                    if let Some(response) = &response_ {
+                        if response.variant.len() == 0 {
+                            search_again = true;
+                            bounds[0] = match bounds[0] {
+                                Some(Outcome::Undecided(d, material_value)) => Some(Outcome::Undecided(d, material_value - 50)),
+                                _ => None
+                            };
+                            bounds[1] = match bounds[1] {
+                                Some(Outcome::Undecided(d, material_value)) => Some(Outcome::Undecided(d, material_value + 50)),
+                                _ => None
+                            };
+                        }
+                    }
+
+                    if search_again {
+                        continue;
+                    }
+                }
+
+                break;
+            }
 
             //println!("history table size: {}", self.history.get_len());
-            println!("transposition table size: {}, hits: {}", self.transposition_table.len(), self.transposition_count);
+            //println!("transposition table size: {}, hits: {}", self.transposition_table.len(), self.transposition_count);
 
             if self.must_stop() {
                 break;
@@ -158,10 +230,10 @@ impl Searcher {
 
     fn recursive_search(&mut self, mut request: RecursiveSearchRequest) -> Option<RecursiveSearchResponse> {
         //println!("white bound: {:?}, black bound: {:?}", request.bounds[0], request.bounds[1]);
-
         if self.must_stop() {
             return None;
         }
+
         self.node_count += 1;
 
         if request.horizon == 0 {
@@ -175,6 +247,7 @@ impl Searcher {
         let other_color = 1 - active_color;
 
         //check transposition table
+        /*
         if let Some((mv, score)) = self.transposition_table.get(request.position.get_hash(), request.horizon as i32) {
             self.transposition_count += 1;
 
@@ -188,12 +261,17 @@ impl Searcher {
                     });
                 }
 
+                if request.depth == 0 || request.depth == 1 {
+                    self.actual_bounds[active_color as usize] = Some(score);
+                }
+
                 return Some(RecursiveSearchResponse {
                     score,
                     variant: vec![mv]
                 });
             }
         }
+        */
 
         let generator = Generator::new(request.position);
 
@@ -201,6 +279,7 @@ impl Searcher {
         let mut current_best_variant: Vec<Move_> = Vec::new();
 
         //TODO examine "null move" -> dangerous in end game / zugzwang positions and stalemate
+        /*
         if (request.depth > 4) && (request.horizon == 1) {
             let score = Some(evaluation::evaluate(&request.position, request.horizon as i32));
 
@@ -216,6 +295,7 @@ impl Searcher {
             }
 
         }
+        */
 
         let mut moves = generator.generate_moves();
 
@@ -233,10 +313,12 @@ impl Searcher {
             let score: Option<Outcome>;
             let mut variant: Vec<Move_> = Vec::new();
 
+            /*
             if has_valid_moves && request.depth > 4 && request.horizon == 1 && !(mv.is_capture() || mv.is_promotion()) {
                 //now we know there are valid moves; do not examine silent moves after depth 3
                 continue;
             }
+            */
 
             match generator.try_apply_move(mv, &self.history) {
                 MoveResult::Next(mut child_pos) => {
@@ -266,7 +348,7 @@ impl Searcher {
                 MoveResult::Illegal => continue,
                 MoveResult::Draw => {
                     has_valid_moves = true;
-                    score = Some(Outcome::Draw(request.horizon as i32));
+                    score = Some(Outcome::Draw(request.depth as i32));
                 }
             }
 
@@ -280,9 +362,6 @@ impl Searcher {
 
                 //cutoff
                 if Searcher::is_better_or_equal_outcome(&request.bounds[other_color as usize], &score, other_color) {
-                    //if request.horizon > 1 {
-                    //    println!("alphabeta cutoff, active color: {}, white lbound: {:?}, black ubound: {:?}, score: {:?}", active_color, request.bounds[0], request.bounds[1], score);
-                    //}
                     return Some(RecursiveSearchResponse {
                         score : request.bounds[other_color as usize].unwrap(),
                         variant: Vec::new()
@@ -292,6 +371,9 @@ impl Searcher {
                 current_best_variant = vec![mv];
                 current_best_variant.append(&mut variant);
                 request.bounds[active_color as usize] = score;
+                if request.depth == 0 || request.depth == 1 {
+                    self.actual_bounds[active_color as usize] = score;
+                }
             }
         }
 
@@ -301,12 +383,12 @@ impl Searcher {
             //check mate or stale mate
             if generator.is_check(active_color) {
                 if active_color == global::COLOR_WHITE {
-                    score = Some(Outcome::WhiteIsMate(request.horizon as i32));
+                    score = Some(Outcome::WhiteIsMate(request.depth as i32));
                 } else {
-                    score = Some(Outcome::BlackIsMate(request.horizon as i32));
+                    score = Some(Outcome::BlackIsMate(request.depth as i32));
                 }
             } else {
-                score = Some(Outcome::Draw(request.horizon as i32));
+                score = Some(Outcome::Draw(request.depth as i32));
             }
             if Searcher::is_better_outcome(&score, &request.bounds[active_color as usize], active_color) {
                 //cutoff
@@ -317,6 +399,9 @@ impl Searcher {
                     });
                 }
                 request.bounds[active_color as usize] = score;
+                if request.depth == 0 || request.depth == 1 {
+                    self.actual_bounds[active_color as usize] = score;
+                }
             }
         }
 
