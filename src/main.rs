@@ -2,6 +2,7 @@ extern crate ctrlc;
 
 #[macro_use]
 extern crate lazy_static;
+
 #[macro_use]
 mod macros;
 
@@ -56,23 +57,23 @@ fn main() {
         }
 
         let command = uci::parse(&line);
-        
+
         let stay = match command {
             Some(InputCommand::Quit) => {
                 false
-            },
+            }
             Some(InputCommand::Stop) => {
                 game_channel.send(InputCommand::Stop).expect("Error sending command");
                 true
-            },
+            }
             Some(InputCommand::Position(args)) => {
                 game_channel.send(InputCommand::Position(args)).expect("Error sending command");
                 true
-            },
+            }
             Some(InputCommand::Go(args)) => {
                 game_channel.send(InputCommand::Go(args)).expect("Error sending command");
                 true
-            },
+            }
             Some(c) => {
                 let result = command::send_command(c);
                 if !result.message.is_empty() {
@@ -99,9 +100,9 @@ fn main() {
     println!("Goodbye");
 }
 
-fn setup_game() -> ( thread::JoinHandle<()>, Sender<InputCommand> ) {
+fn setup_game() -> (thread::JoinHandle<()>, Sender<InputCommand>) {
     let (sender, receiver): (Sender<InputCommand>, Receiver<InputCommand>) = mpsc::channel();
-    
+
     let game_handle = thread::spawn(move || {
         let mut game = Game::new(receiver);
         game.start();
@@ -110,7 +111,7 @@ fn setup_game() -> ( thread::JoinHandle<()>, Sender<InputCommand> ) {
     (game_handle, sender)
 }
 
-fn setup_input () -> ( thread::JoinHandle<()>, Receiver<String> ) {
+fn setup_input() -> (thread::JoinHandle<()>, Receiver<String>) {
     let (sender, receiver): (Sender<String>, Receiver<String>) = mpsc::channel();
 
     //input via console

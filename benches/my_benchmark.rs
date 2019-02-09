@@ -12,14 +12,6 @@ fn bench_generate_moves(c: &mut Criterion) {
     c.bench_function("generate moves", move |b| b.iter(|| haddock::generator::Generator::new(&position).generate_moves()));
 }
 
-fn bench_generate_legal_moves(c: &mut Criterion) {
-    let fen = "r7/pp4k1/2p1b1p1/8/7r/1P1Q4/P5PP/5R1K w - - 0 1";
-    let fen_parts = fen.split(" ").collect::<Vec<&str>>();
-    let position = haddock::parser::parse_fen(&fen_parts).unwrap();
-
-    c.bench_function("generate legal moves", move |b| b.iter(|| haddock::generator::Generator::new(&position).generate_legal_moves()));
-}
-
 fn bench_apply_move(c: &mut Criterion) {
     let fen = "r7/pp4k1/2p1b1p1/8/7r/1P1Q4/P5PP/5R1K w - - 0 1";
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
@@ -47,7 +39,6 @@ fn bench_evaluate_position(c: &mut Criterion) {
 criterion_group!(
     benches, 
     bench_generate_moves,
-    bench_generate_legal_moves,
     bench_apply_move,
     bench_evaluate_position);
 criterion_main!(benches);

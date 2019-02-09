@@ -21,8 +21,6 @@ pub const MOVEBOARD_BLACK_PAWN_CAP: usize = 5;
 
 lazy_static! {
     static ref PIECE_MOVE_BOARDS: [[BitBoard; 64]; 6] = {
-        //println!("Haddock is generating piece move boards");
-
         let mut result = [[BitBoard::new(); 64]; 6];
         result[MOVEBOARD_KING] = create_king_moveboards();
         result[MOVEBOARD_KNIGHT] = create_knight_moveboards();
@@ -34,8 +32,6 @@ lazy_static! {
     };
 
     static ref RAY_MOVE_BOARDS: [[BitBoard; 64]; 8] = {
-        //println!("Haddock is generating ray move boards");
-
         let mut result = [[BitBoard::new(); 64]; 8];
         result[DIR_UP] = create_ray_up_moveboards();
         result[DIR_UP_RIGHT] = create_ray_up_right_moveboards();

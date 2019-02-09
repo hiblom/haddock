@@ -10,12 +10,12 @@ pub enum InputCommand {
     Go(String),
     Stop,
     PonderHit,
-    Quit
+    Quit,
 }
 
 pub struct CommandResult {
     pub stay: bool,
-    pub message: String
+    pub message: String,
 }
 
 pub fn send_command(command: InputCommand) -> CommandResult {
@@ -26,13 +26,13 @@ pub fn send_command(command: InputCommand) -> CommandResult {
             message.push_str(&format!("id author {}\n", env!("CARGO_PKG_AUTHORS")));
             message.push_str("uciok\n");
             //todo send optional options
-            CommandResult{ stay: true, message: message}
-        },
+            CommandResult { stay: true, message }
+        }
         InputCommand::IsReady => {
             message.push_str("readyok\n"); //wait for initializing => check game state (NOT Searching)
-            CommandResult{ stay: true, message: message}
-        },
-        InputCommand::Quit => CommandResult{ stay: false, message: message},
-        _ => CommandResult{ stay: true, message: message} //pretend we know this command :p
+            CommandResult { stay: true, message }
+        }
+        InputCommand::Quit => CommandResult { stay: false, message },
+        _ => CommandResult { stay: true, message } //pretend we know this command :p
     }
 }

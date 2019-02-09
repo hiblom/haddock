@@ -20,7 +20,7 @@ pub struct Game {
     searcher_handle: Option<thread::JoinHandle<()>>,
     searcher_channel: Option<Sender<SearchCommand>>,
     stop_signal: Arc<AtomicBool>,
-    history: HashCounter
+    history: HashCounter,
 }
 
 impl<'a> Game {
@@ -31,7 +31,7 @@ impl<'a> Game {
             searcher_handle: None,
             searcher_channel: None,
             stop_signal: Arc::new(AtomicBool::new(false)),
-            history: HashCounter::new()
+            history: HashCounter::new(),
         }
     }
 
@@ -114,30 +114,29 @@ impl<'a> Game {
                 }
                 "moves" => (),
                 _ => match &mut self.position {
-                        Some(pos) => {
-                            match Move_::from_str(args_parts[i]) {
-                                Some(mv) => {
-                                    let mv = pos.analyze_move(mv);
-                                    if Generator::new(pos).is_legal_move(mv) {
-                                        //todo check 3 fold repetition here
-                                        self.history.incr(pos.get_hash());
-                                        pos.apply_move(mv);
-                                    }
-                                    else {
-                                        println!("{} is an illegal move!", &args_parts[i]);
-                                        println!("internal position:\n{}", pos);
-                                        return true;  
-                                    }
-                                }, 
-                                None => {
-                                    println!("Error in move");
+                    Some(pos) => {
+                        match Move_::from_str(args_parts[i]) {
+                            Some(mv) => {
+                                let mv = pos.analyze_move(mv);
+                                if Generator::new(pos).is_legal_move(mv) {
+                                    //todo check 3 fold repetition here
+                                    self.history.incr(pos.get_hash());
+                                    pos.apply_move(mv);
+                                } else {
+                                    println!("{} is an illegal move!", &args_parts[i]);
+                                    println!("internal position:\n{}", pos);
                                     return true;
                                 }
                             }
-                        },
-                        None => return true
+                            None => {
+                                println!("Error in move");
+                                return true;
+                            }
+                        }
                     }
+                    None => return true
                 }
+            }
             i += 1;
         }
 
@@ -154,7 +153,7 @@ impl<'a> Game {
             match args_parts[i] {
                 "infinite" => {
                     search_type = SearchType::Infinite
-                },
+                }
                 "depth" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -162,7 +161,7 @@ impl<'a> Game {
                         return true;
                     }
                     search_type = SearchType::Depth(value);
-                },
+                }
                 "nodes" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -170,7 +169,7 @@ impl<'a> Game {
                         return true;
                     }
                     search_type = SearchType::Nodes(value);
-                },
+                }
                 "movetime" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -178,7 +177,7 @@ impl<'a> Game {
                         return true;
                     }
                     search_type = SearchType::MoveTime(value);
-                },
+                }
                 "wtime" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -190,7 +189,7 @@ impl<'a> Game {
                     } else {
                         search_type = SearchType::CTime(value, 0, 0, 0, 0);
                     }
-                },
+                }
                 "btime" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -202,7 +201,7 @@ impl<'a> Game {
                     } else {
                         search_type = SearchType::CTime(0, value, 0, 0, 0);
                     }
-                },
+                }
                 "winc" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -214,7 +213,7 @@ impl<'a> Game {
                     } else {
                         search_type = SearchType::CTime(0, 0, value, 0, 0);
                     }
-                },
+                }
                 "binc" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -226,7 +225,7 @@ impl<'a> Game {
                     } else {
                         search_type = SearchType::CTime(0, 0, 0, value, 0);
                     }
-                },
+                }
                 "movestogo" => {
                     i += 1;
                     let (succeeded, value) = Game::get_numeric_value(&args_parts, i);
@@ -238,7 +237,7 @@ impl<'a> Game {
                     } else {
                         search_type = SearchType::CTime(0, 0, 0, 0, value);
                     }
-                },
+                }
                 _ => ()
             }
             i += 1;
@@ -247,7 +246,7 @@ impl<'a> Game {
 
         let sender: &Sender<SearchCommand>;
         self.setup_search();
-        
+
         match &self.searcher_channel {
             Some(s) => sender = s,
             None => return true
@@ -266,7 +265,7 @@ impl<'a> Game {
         match args_parts[i].parse::<u64>() {
             Ok(n) => {
                 (true, n)
-            },
+            }
             Err(_) => {
                 println!("Could not parse number");
                 (false, 0)
@@ -280,14 +279,14 @@ impl<'a> Game {
         self.cleanup_searcher();
 
         let (sender_request, receiver_request): (Sender<SearchCommand>, Receiver<SearchCommand>) = mpsc::channel();
-    
+
         let position_clone: Position;
-        
+
         match &self.position {
             Some(p) => position_clone = p.clone(),
             None => {
                 println!("Cannot setup search without position");
-                return
+                return;
             }
         }
 

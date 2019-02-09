@@ -1,9 +1,6 @@
 use crate::command::InputCommand;
 
 pub fn parse(line: &str) -> Option<InputCommand> {
-    //split line by whitespace
-    //ignore all words that aren't uci commands
-
     let words = line.split_whitespace().collect::<Vec<&str>>();
 
     for (i, &word) in words.iter().enumerate() {

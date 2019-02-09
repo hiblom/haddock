@@ -84,34 +84,12 @@ impl PieceType {
         c
     }
 
-    /*
-    pub fn get_color(self) -> u8 {
-        self.0 & MASK_COLOR
-    }
-    */
-
     pub fn set_color(&mut self, color: u8) {
         self.0 = (self.0 & MASK_TYPE) | color;
     }
 
     pub fn get_type(self) -> u8 {
         self.0 & MASK_TYPE
-    }
-
-    #[allow(dead_code)]
-    pub fn get_move_type(self) -> PieceType {
-        let raw_type = self.0 & MASK_TYPE;
-        
-        if raw_type == PIECE_PAWN {
-            return PieceType(self.0);
-        }
-
-        PieceType(self.0 & MASK_TYPE)
-    }
-
-    #[allow(dead_code)]
-    pub fn has_color(self, color: u8) -> bool {
-        color == self.0 & MASK_COLOR
     }
 
     pub fn is_pawn(self) -> bool {

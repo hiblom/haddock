@@ -389,15 +389,9 @@ fn test_pawn_moves_startpos_e2() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves(sq("e2"), &mut moves);
+    Generator::new(&position).generate_pawn_moves_2(&mut moves);
 
     //assert
-    assert_eq!(
-        expected_moves.len(),
-        moves.len(),
-        "Number of pawn moves not as expected"
-    );
-
     for expected_move in expected_moves.iter() {
         assert!(moves.contains(expected_move), "Pawn moves not as expected");
     }
@@ -416,15 +410,9 @@ fn test_pawn_moves_startpos_e7() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves(sq("e7"), &mut moves);
+    Generator::new(&position).generate_pawn_moves_2(&mut moves);
 
     //assert
-    assert_eq!(
-        expected_moves.len(),
-        moves.len(),
-        "Number of pawn moves not as expected"
-    );
-
     for expected_move in expected_moves.iter() {
         assert!(moves.contains(expected_move), "Pawn moves not as expected");
     }
@@ -445,15 +433,9 @@ fn test_pawn_moves_capture() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves(sq("d4"), &mut moves);
+    Generator::new(&position).generate_pawn_moves_2(&mut moves);
 
     //assert
-    assert_eq!(
-        expected_moves.len(),
-        moves.len(),
-        "Number of pawn moves not as expected"
-    );
-
     for expected_move in expected_moves.iter() {
         assert!(moves.contains(expected_move), "Pawn moves not as expected");
     }
@@ -590,15 +572,9 @@ fn test_pawn_moves_ep() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves(sq("d5"), &mut moves);
+    Generator::new(&position).generate_pawn_moves_2(&mut moves);
 
     //assert
-    assert_eq!(
-        expected_moves.len(),
-        moves.len(),
-        "Number of pawn moves not as expected"
-    );
-
     for expected_move in expected_moves.iter() {
         assert!(moves.contains(expected_move), "Pawn moves not as expected");
     }
@@ -620,15 +596,9 @@ fn test_pawn_moves_promo() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves(sq("e7"), &mut moves);
+    Generator::new(&position).generate_pawn_moves_2(&mut moves);
 
     //assert
-    assert_eq!(
-        expected_moves.len(),
-        moves.len(),
-        "Number of pawn moves not as expected"
-    );
-
     for expected_move in expected_moves.iter() {
         assert!(moves.contains(expected_move), "Pawn moves not as expected");
     }

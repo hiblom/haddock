@@ -3,13 +3,13 @@ use std::fmt;
 use crate::square::Square;
 use crate::piecetype::PieceType;
 
-const MOVE_MASK_TO: u32           = 0b00000000_00000000_00000000_11111111;
-const MOVE_MASK_FROM: u32         = 0b00000000_00000000_11111111_00000000;
-const MOVE_BIT_PROMO: u32         = 0b00000000_00000001_00000000_00000000;
-const MOVE_BIT_EP: u32            = 0b00000000_00000010_00000000_00000000;
-const MOVE_BIT_CASTLING: u32      = 0b00000000_00000100_00000000_00000000;
-const MOVE_BIT_CAPTURE: u32       = 0b00000000_00001000_00000000_00000000;
-const MOVE_MASK_PROMO_PIECE: u32  = 0b11111111_00000000_00000000_00000000;
+const MOVE_MASK_TO: u32 = 0b00000000_00000000_00000000_11111111;
+const MOVE_MASK_FROM: u32 = 0b00000000_00000000_11111111_00000000;
+const MOVE_BIT_PROMO: u32 = 0b00000000_00000001_00000000_00000000;
+const MOVE_BIT_EP: u32 = 0b00000000_00000010_00000000_00000000;
+const MOVE_BIT_CASTLING: u32 = 0b00000000_00000100_00000000_00000000;
+const MOVE_BIT_CAPTURE: u32 = 0b00000000_00001000_00000000_00000000;
+const MOVE_MASK_PROMO_PIECE: u32 = 0b11111111_00000000_00000000_00000000;
 
 #[derive(Clone, Copy, Eq, Hash)]
 pub struct Move_(u32);
@@ -28,8 +28,8 @@ impl Move_ {
         let mut result: u32 = 0;
         let len = value.len();
 
-        if  len != 4 && len != 5 {
-            return None
+        if len != 4 && len != 5 {
+            return None;
         }
 
         if len == 5 {
@@ -40,10 +40,10 @@ impl Move_ {
                         Some(p) => {
                             result |= MOVE_BIT_PROMO;
                             result |= (p.to_u8() as u32) << 24;
-                        },
+                        }
                         None => return None
                     }
-                },
+                }
                 None => return None
             }
         }
@@ -71,7 +71,7 @@ impl Move_ {
 
         if self.0 & MOVE_BIT_PROMO == 0 {
             //normal move
-            return format!("{}{}", sq_from_str, sq_to_str)
+            return format!("{}{}", sq_from_str, sq_to_str);
         }
 
         //promotion move

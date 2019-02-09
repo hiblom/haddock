@@ -25,7 +25,6 @@ pub struct Searcher {
     end_time: Option<SystemTime>,
     stop_signal: Arc<AtomicBool>,
     node_count: u32,
-    transposition_count: u32,
     history: HashCounter,
     transposition_table: TranspositionTable,
     actual_bounds: [Option<Outcome>; 2]
@@ -54,7 +53,6 @@ impl Searcher {
             end_time: None,
             stop_signal,
             node_count: 0,
-            transposition_count: 0,
             history,
             transposition_table: TranspositionTable::new(),
             actual_bounds: [None; 2]

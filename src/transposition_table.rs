@@ -98,6 +98,7 @@ impl TranspositionTable {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get(&self, hash_key: u64, horizon: i32) -> Option<(Move_, Outcome)> {
         match self.0.get(&hash_key) {
             Some(e) => {
