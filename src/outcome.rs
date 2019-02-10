@@ -2,6 +2,9 @@ use std::cmp::Ordering;
 
 use crate::global;
 
+pub const MATE_AGAINST_WHITE: i32 = -20000;
+pub const MATE_AGAINST_BLACK: i32 = 20000;
+
 #[derive(Copy, Clone, Debug)]
 pub enum Outcome {
     Undecided(i32, i32),
@@ -13,8 +16,8 @@ impl Outcome {
     pub fn score(&self) -> i32 {
         match self {
             Outcome::Undecided(_, material_value) => *material_value,
-            Outcome::WhiteIsMate(d) => -20000 + d, // to look for quicker mate
-            Outcome::BlackIsMate(d) => 20000 - d,
+            Outcome::WhiteIsMate(d) => MATE_AGAINST_WHITE + d, // to look for quicker mate
+            Outcome::BlackIsMate(d) => MATE_AGAINST_BLACK - d,
             _ => 0
         }
     }

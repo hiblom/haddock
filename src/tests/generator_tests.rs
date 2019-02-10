@@ -36,7 +36,7 @@ fn test_king_moves_middle() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_king(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_king(COLOR_WHITE), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -68,7 +68,7 @@ fn test_king_moves_corner() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("a1"), PieceType::new_king(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("a1"), PieceType::new_king(COLOR_WHITE), false, &mut moves);
 
     //assert
     println!("expected_moves moves:");
@@ -109,7 +109,7 @@ fn test_king_moves_other_pieces() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("a1"), PieceType::new_king(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("a1"), PieceType::new_king(COLOR_WHITE), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -151,7 +151,7 @@ fn test_rook_moves_middle() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_rook(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_rook(COLOR_WHITE), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -193,7 +193,7 @@ fn test_rook_moves_corner() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("h8"), PieceType::new_rook(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("h8"), PieceType::new_rook(COLOR_WHITE), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -224,7 +224,7 @@ fn test_rook_moves_other_pieces() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("h8"), PieceType::new_rook(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("h8"), PieceType::new_rook(COLOR_WHITE), false, &mut moves);
 
     //assert
     println!("expected_moves moves:");
@@ -270,7 +270,7 @@ fn test_knight_moves_middle() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_knight(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_knight(COLOR_WHITE), false, &mut moves);
 
     //assert
     println!("expected_moves moves:");
@@ -314,7 +314,7 @@ fn test_knight_moves_corner() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("h1"), PieceType::new_knight(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("h1"), PieceType::new_knight(COLOR_WHITE), false, &mut moves);
 
     //assert
     println!("expected_moves moves:");
@@ -352,7 +352,7 @@ fn test_knight_moves_startpos_b1() {
 
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("b1"), PieceType::new_knight(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("b1"), PieceType::new_knight(COLOR_WHITE), false, &mut moves);
 
     //assert
     println!("expected_moves moves:");
@@ -389,7 +389,7 @@ fn test_pawn_moves_startpos_e2() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves_2(&mut moves);
+    Generator::new(&position).generate_pawn_moves_2(false, &mut moves);
 
     //assert
     for expected_move in expected_moves.iter() {
@@ -410,7 +410,7 @@ fn test_pawn_moves_startpos_e7() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves_2(&mut moves);
+    Generator::new(&position).generate_pawn_moves_2(false, &mut moves);
 
     //assert
     for expected_move in expected_moves.iter() {
@@ -433,7 +433,7 @@ fn test_pawn_moves_capture() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves_2(&mut moves);
+    Generator::new(&position).generate_pawn_moves_2(false, &mut moves);
 
     //assert
     for expected_move in expected_moves.iter() {
@@ -467,7 +467,7 @@ fn test_bishop_moves_middle() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_bishop(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("d4"), PieceType::new_bishop(COLOR_WHITE), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -501,7 +501,7 @@ fn test_bishop_moves_edge() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("h4"), PieceType::new_bishop(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("h4"), PieceType::new_bishop(COLOR_WHITE), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -531,7 +531,7 @@ fn test_bishop_moves_other_pieces() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_piece_moves(sq("h4"), PieceType::new_bishop(COLOR_WHITE), &mut moves);
+    Generator::new(&position).generate_piece_moves(sq("h4"), PieceType::new_bishop(COLOR_WHITE), false, &mut moves);
 
     //assert
     println!("expected_moves moves:");
@@ -572,7 +572,7 @@ fn test_pawn_moves_ep() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves_2(&mut moves);
+    Generator::new(&position).generate_pawn_moves_2(false, &mut moves);
 
     //assert
     for expected_move in expected_moves.iter() {
@@ -596,7 +596,7 @@ fn test_pawn_moves_promo() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_pawn_moves_2(&mut moves);
+    Generator::new(&position).generate_pawn_moves_2(false, &mut moves);
 
     //assert
     for expected_move in expected_moves.iter() {
@@ -619,7 +619,7 @@ fn test_king_castling() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_king_moves(sq("e8"), &mut moves);
+    Generator::new(&position).generate_king_moves(sq("e8"), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -648,7 +648,7 @@ fn test_king_castling_sq_taken() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_king_moves(sq("e8"), &mut moves);
+    Generator::new(&position).generate_king_moves(sq("e8"), false, &mut moves);
 
     //assert
     assert_eq!(
@@ -677,7 +677,7 @@ fn test_king_castling_no_status() {
     
     //act
     let mut moves = Vec::new();
-    Generator::new(&position).generate_king_moves(sq("e8"), &mut moves);
+    Generator::new(&position).generate_king_moves(sq("e8"), false, &mut moves);
 
     //assert
     assert_eq!(

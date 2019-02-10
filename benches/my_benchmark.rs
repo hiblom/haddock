@@ -9,7 +9,7 @@ fn bench_generate_moves(c: &mut Criterion) {
     let fen_parts = fen.split(" ").collect::<Vec<&str>>();
     let position = haddock::parser::parse_fen(&fen_parts).unwrap();
 
-    c.bench_function("generate moves", move |b| b.iter(|| haddock::generator::Generator::new(&position).generate_moves()));
+    c.bench_function("generate moves", move |b| b.iter(|| haddock::generator::Generator::new(&position).generate_moves(false)));
 }
 
 fn bench_apply_move(c: &mut Criterion) {
