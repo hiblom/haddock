@@ -12,13 +12,13 @@ Pre-release 0.2.1 Features
 * alpha beta move ordering & pruning
 
 Next pre-release
-* quiesence search / SEE
+* quiesence search
 * better time management
+* transposition tables
 
 Roadmap
 * opening book
 * implement all UCI commands
-* transposition tables
 * end-game tables
 * multi-threaded search
 * etc...
